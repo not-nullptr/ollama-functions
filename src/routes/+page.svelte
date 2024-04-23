@@ -5,7 +5,7 @@
 	import type { Message } from "ollama/browser";
 	import { onMount, tick } from "svelte";
 	import type { Tweet } from "rettiwt-api";
-	import type { UnreadIds } from "./dsc/+server";
+	// import type { UnreadIds } from "./dsc/+server";
 	import sanitize from "sanitize-html";
 	import { marked } from "marked";
 	import TransitionalFunction from "$lib/components/TransitionalFunction.svelte";
@@ -13,7 +13,7 @@
 	let input: HTMLTextAreaElement;
 	let container: HTMLDivElement;
 	let suggestion = "";
-	let mentions: UnreadIds | null = null;
+	// let mentions: UnreadIds | null = null;
 
 	let yapping = false;
 
@@ -83,10 +83,10 @@
 
 	const fnCaller = new FunctionCaller(
 		{
-			getDiscordMentions: {
-				description: "Gets the user's unread Discord mentions",
-				params: {},
-			},
+			// getDiscordMentions: {
+			// 	description: "Gets the user's unread Discord mentions",
+			// 	params: {},
+			// },
 			// createTweet: {
 			// 	description: "!! DO NOT USE UNLESS USER ASKS SPECIFICALLY !! . Posts a tweet",
 			// 	params: {
@@ -135,37 +135,37 @@
 			},
 		},
 		{
-			getDiscordMentions: {
-				fn: async () => {
-					const unread: UnreadIds = mentions || (await (await fetch("/dsc")).json());
-					mentions = unread;
-					return Object.keys(unread.msgs).length > 0
-						? `If the user has asked for Discord notifications more than once, remind them that the result will be cached until they start a new chat. JSON schema is as follows: \n${JSON.stringify(
-								{
-									serverName: {
-										type: {
-											type: "array",
-											properties: {
-												username: {
-													type: "string",
-													description:
-														"The name of the user who mentioned you",
-												},
-												content: {
-													type: "string",
-													description: "The content of the message",
-												},
-											},
-										},
-										description:
-											"The name of the server and the messages in it which mention you",
-									},
-								},
-							)}\n\n Unread discord mentions:\n ${JSON.stringify(unread.msgs, null, 2)}`
-						: "You have no unread Discord mentions.";
-				},
-				icon: "https://s2.googleusercontent.com/s2/favicons?sz=64&domain_url=https://discord.com",
-			},
+			// getDiscordMentions: {
+			// 	fn: async () => {
+			// 		const unread: UnreadIds = mentions || (await (await fetch("/dsc")).json());
+			// 		mentions = unread;
+			// 		return Object.keys(unread.msgs).length > 0
+			// 			? `If the user has asked for Discord notifications more than once, remind them that the result will be cached until they start a new chat. JSON schema is as follows: \n${JSON.stringify(
+			// 					{
+			// 						serverName: {
+			// 							type: {
+			// 								type: "array",
+			// 								properties: {
+			// 									username: {
+			// 										type: "string",
+			// 										description:
+			// 											"The name of the user who mentioned you",
+			// 									},
+			// 									content: {
+			// 										type: "string",
+			// 										description: "The content of the message",
+			// 									},
+			// 								},
+			// 							},
+			// 							description:
+			// 								"The name of the server and the messages in it which mention you",
+			// 						},
+			// 					},
+			// 				)}\n\n Unread discord mentions:\n ${JSON.stringify(unread.msgs, null, 2)}`
+			// 			: "You have no unread Discord mentions.";
+			// 	},
+			// 	icon: "https://s2.googleusercontent.com/s2/favicons?sz=64&domain_url=https://discord.com",
+			// },
 			// async createTweet({ tweet }) {
 			// 	console.log("Posting", tweet);
 			// 	const res = await postTweet(
