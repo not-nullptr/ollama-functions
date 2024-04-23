@@ -6,6 +6,9 @@
 	import { onMount, tick } from "svelte";
 	import type { Tweet } from "rettiwt-api";
 	import type { UnreadIds } from "./dsc/+server";
+	import sanitize from "sanitize-html";
+	import { marked } from "marked";
+	import TransitionalFunction from "$lib/components/TransitionalFunction.svelte";
 
 	let input: HTMLTextAreaElement;
 	let container: HTMLDivElement;
@@ -13,6 +16,11 @@
 	let mentions: UnreadIds | null = null;
 
 	let yapping = false;
+
+	let beginInference: () => void;
+	let cancelInference: () => void;
+	let triggerFunction: () => Promise<void>;
+	let iconUrl: string;
 
 	let chatHistory: (Message & {
 		source?: string;
@@ -42,6 +50,7 @@
 	$: console.log(chatHistory);
 	$: {
 		on;
+		console.log(on);
 		(() => {
 			if (!browser) return;
 			if (!on) {
@@ -74,95 +83,138 @@
 
 	const fnCaller = new FunctionCaller(
 		{
-			setLightState: {
-				description:
-					"Turns a light on or off, only use if the user asks to change the state",
-				params: {
-					state: {
-						description: "The state to set the light to",
-						type: "boolean",
-						required: true,
-					},
-				},
-			},
-			getLightState: {
-				description: "Gets the current state of the light",
-				params: {},
-			},
 			getDiscordMentions: {
 				description: "Gets the user's unread Discord mentions",
 				params: {},
 			},
-			createTweet: {
-				description:
-					"Posts a tweet. Do not use unless the user specifically mentions posting a tweet in their last message sent.",
+			// createTweet: {
+			// 	description: "!! DO NOT USE UNLESS USER ASKS SPECIFICALLY !! . Posts a tweet",
+			// 	params: {
+			// 		tweet: {
+			// 			description:
+			// 				"Write a tweet from the prompt, from the perspective of the user.",
+			// 			type: "string",
+			// 			required: true,
+			// 		},
+			// 	},
+			// },
+			setGpuRgbLight: {
+				description: "Sets the RGB light on the user's GPU",
 				params: {
-					tweet: {
+					red: {
+						description: "The red value of the RGB light, (0 - 255)",
+						type: "number",
+						required: true,
+					},
+					green: {
+						description: "The green value of the RGB light (0 - 255)",
+						type: "number",
+						required: true,
+					},
+					blue: {
+						description: "The blue value of the RGB light (0 - 255)",
+						type: "number",
+						required: true,
+					},
+				},
+			},
+			getChatTheme: {
+				description: "Gets the current chat theme.",
+				params: {},
+			},
+			setChatTheme: {
+				description: "Sets the current chat theme",
+				params: {
+					theme: {
+						type: "boolean",
 						description:
-							"Write a tweet from the prompt, from the perspective of the user.",
-						type: "string",
+							"Dark theme corresponds to false. Light theme corresponds to true.",
 						required: true,
 					},
 				},
 			},
 		},
 		{
-			setLightState: ({ state }) => {
-				console.log(state);
-				const prev = on ? true : false;
-				on = state;
-				return `The light was previously ${
-					prev ? "on" : "off"
-				}, you have just turned it ${on ? "on" : "off"}`;
-			},
-			getLightState: async () => {
-				return `The light is currently ${on ? "on" : "off"}`;
-			},
-			async getDiscordMentions() {
-				const unread: UnreadIds = mentions || (await (await fetch("/dsc")).json());
-				mentions = unread;
-				return Object.keys(unread.msgs).length > 0
-					? `If the user has asked for Discord notifications more than once, remind them that the result will be cached until they start a new chat. JSON schema is as follows: \n${JSON.stringify(
-							{
-								serverName: {
-									type: {
-										type: "array",
-										properties: {
-											username: {
-												type: "string",
-												description:
-													"The name of the user who mentioned you",
-											},
-											content: {
-												type: "string",
-												description: "The content of the message",
+			getDiscordMentions: {
+				fn: async () => {
+					const unread: UnreadIds = mentions || (await (await fetch("/dsc")).json());
+					mentions = unread;
+					return Object.keys(unread.msgs).length > 0
+						? `If the user has asked for Discord notifications more than once, remind them that the result will be cached until they start a new chat. JSON schema is as follows: \n${JSON.stringify(
+								{
+									serverName: {
+										type: {
+											type: "array",
+											properties: {
+												username: {
+													type: "string",
+													description:
+														"The name of the user who mentioned you",
+												},
+												content: {
+													type: "string",
+													description: "The content of the message",
+												},
 											},
 										},
+										description:
+											"The name of the server and the messages in it which mention you",
 									},
-									description:
-										"The name of the server and the messages in it which mention you",
 								},
-							},
-						)}\n\n Unread discord mentions:\n ${JSON.stringify(unread.msgs, null, 2)}`
-					: "You have no unread Discord mentions.";
+							)}\n\n Unread discord mentions:\n ${JSON.stringify(unread.msgs, null, 2)}`
+						: "You have no unread Discord mentions.";
+				},
+				icon: "https://s2.googleusercontent.com/s2/favicons?sz=64&domain_url=https://discord.com",
 			},
-			async createTweet({ tweet }) {
-				console.log("Posting", tweet);
-				const res = await postTweet(
-					`${tweet.replace(/\n+/g, ". ")} (DISCLAIMER: TWEETED BY AI)`,
-				);
-				const url = `https://twitter.com/${res.tweetBy.userName}/status/${res.id}`;
-				const req = await fetch(
-					"https://api.allorigins.win/get?url=" + encodeURIComponent(url),
-				);
-				const data = await req.json();
-				const doc = new DOMParser().parseFromString(data.contents, "text/html");
-				const title = doc.title;
-				newMsgOpts = {
-					source: `https://twitter.com/${res.tweetBy.userName}/status/${res.id}`,
-					title,
-				};
-				return `Tell the user that you just posted a tweet for them, with the following content:\n\n${tweet}\n\nTell the user that you posted the tweet, and tell them the contents, and provide some commentary on it.`;
+			// async createTweet({ tweet }) {
+			// 	console.log("Posting", tweet);
+			// 	const res = await postTweet(
+			// 		`${tweet.replace(/\n+/g, ". ")} (DISCLAIMER: TWEETED BY AI)`,
+			// 	);
+			// 	const url = `https://twitter.com/${res.tweetBy.userName}/status/${res.id}`;
+			// 	const req = await fetch(
+			// 		"https://api.allorigins.win/get?url=" + encodeURIComponent(url),
+			// 	);
+			// 	const data = await req.json();
+			// 	const doc = new DOMParser().parseFromString(data.contents, "text/html");
+			// 	const title = doc.title;
+			// 	newMsgOpts = {
+			// 		source: `https://twitter.com/${res.tweetBy.userName}/status/${res.id}`,
+			// 		title,
+			// 	};
+			// 	return `Tell the user that you just posted a tweet for them, with the following content:\n\n${tweet}\n\nTell the user that you posted the tweet, and tell them the contents, and provide some commentary on it.`;
+			// },
+			setGpuRgbLight: {
+				fn: async ({ red, green, blue }) => {
+					try {
+						console.log("Setting RGB light to", red, green, blue);
+						await fetch(`/gpu?rgb=${red},${green},${blue}`);
+						return `Assistant has set the RGB value. Inform the user that the RGB light on their GPU has been set. Success!`;
+					} catch {
+						return "An error occurred while setting the RGB light on the user's GPU.";
+					}
+				},
+				icon: "https://s2.googleusercontent.com/s2/favicons?sz=64&domain_url=https://nvidia.com",
+			},
+			getChatTheme: {
+				fn: () => (on ? "Current theme is light" : "Current theme is dark"),
+				icon: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTnEo1pmjomnVL7tL5Zf4zGsrw0ZB99Y9I3rozNkNhhrQ&s",
+			},
+			// setThemeState({ theme }) {
+			// 	console.log("setting to", theme);
+			// 	on = theme;
+			// 	return `Theme updated to ${theme} successfully.`;
+			// },
+			setChatTheme: {
+				fn: ({ theme }) => {
+					if (typeof theme === "string") {
+						theme = theme === "true";
+					}
+					console.log("setting to", theme);
+					on = theme;
+					return `LLaMA is setting the theme to ${theme ? "light" : "dark"}. Success!`;
+				},
+				icon: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTnEo1pmjomnVL7tL5Zf4zGsrw0ZB99Y9I3rozNkNhhrQ&s",
 			},
 		},
 	);
@@ -228,6 +280,9 @@
 			{ ...newMsgOpts, role: "assistant", content: "" },
 		];
 		fixContainerScroll();
+		await tick();
+		beginInference();
+		await tick();
 		yapping = true;
 		let query = input.value;
 		let sysPrompt = "";
@@ -243,6 +298,13 @@
 		}
 		const fn = await fnCaller.getFunction(query, chatHistory);
 		if (fn?.function) {
+			iconUrl =
+				fnCaller.getIcon(fn.function) ||
+				"https://s2.googleusercontent.com/s2/favicons?domain=undefined&sz=64";
+			await tick();
+			await triggerFunction();
+			await new Promise((resolve) => setTimeout(resolve, 500)); // admire the animation lol
+
 			const fnRes = await fnCaller.callFunction(fn);
 			sysPrompt += `Use the following between <context> XML tags to help answer the user's question. Do not reference the context, do not mention "context" to the user, do not output the full context XML, only use the facts inside of it.\n<context>\n  ${fnRes}\n</context>`;
 		}
@@ -256,6 +318,8 @@
 			messages: [...chatHistory.slice(0, -1)],
 			stream: true,
 		});
+		cancelInference();
+		await new Promise((resolve) => setTimeout(resolve, 400));
 		for await (const message of chat) {
 			chatHistory[chatHistory.length - 1].content += message.message.content;
 			if (message.done) {
@@ -268,6 +332,12 @@
 			fixInputSize();
 		}
 	};
+
+	const thisSucks = (md: string) => {
+		return marked(md, {
+			async: false,
+		}) as string;
+	};
 </script>
 
 <div
@@ -277,7 +347,16 @@
 	{#each chatHistory.filter((c) => c.role !== "system") as message}
 		<div>
 			<b>{message.role}</b>
-			<div class="whitespace-pre-wrap">{message.content}</div>
+			<div class="whitespace-pre-wrap">
+				{#if !message.content && message.role === "assistant"}
+					<TransitionalFunction
+						bind:beginInference
+						bind:cancelInference
+						bind:triggerFunction
+						bind:iconUrl
+					/>
+				{/if}{message.content}
+			</div>
 		</div>
 		{#if message.source}
 			<a

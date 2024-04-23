@@ -15,7 +15,9 @@
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",
+		"@types/dompurify": "^3.0.5",
 		"@types/pako": "^2.0.3",
+		"@types/sanitize-html": "^2.11.0",
 		"@types/uuid": "^9.0.8",
 		"@types/ws": "^8.5.10",
 		"autoprefixer": "^10.4.19",
@@ -34,10 +36,13 @@
 		"buffer": "^6.0.3",
 		"discord-api-types": "^0.37.79",
 		"discord-protos": "^1.0.5",
+		"fast-average-color": "^9.4.0",
+		"marked": "^12.0.2",
 		"monaco-editor": "^0.47.0",
 		"ollama": "^0.5.0",
 		"pako": "^2.1.0",
 		"rettiwt-api": "^2.7.1",
+		"sanitize-html": "^2.13.0",
 		"uuid": "^9.0.1",
 		"ws": "^8.16.0"
 	}

@@ -42,9 +42,12 @@ export class FunctionCaller<T extends FunctionSchema> {
 	constructor(
 		private schema: T,
 		private fnMap: {
-			[K in keyof T]: (params: {
-				[P in keyof T[K]["params"]]: StringToType<T[K]["params"][P]["type"]>;
-			}) => any;
+			[K in keyof T]: {
+				fn: (params: {
+					[P in keyof T[K]["params"]]: StringToType<T[K]["params"][P]["type"]>;
+				}) => any;
+				icon?: string;
+			};
 		},
 	) {
 		if (!browser) return;
@@ -64,17 +67,32 @@ export class FunctionCaller<T extends FunctionSchema> {
 				messages: [
 					{
 						role: "system",
-						content: `Based on the given history and query, return a function from the schema with the parameters filled in. Return \"null\" if no functions are relevant to the query and history.\nFunctions: ${JSON.stringify(
+						content: `Return null if none match. Based on the given history and query, return a function from the schema with the parameters filled in. Return null if none match. Return \"null\" if no functions are relevant to the query and history.\nFunctions: ${JSON.stringify(
 							this.schema,
-						)}\nSchema: ${JSON.stringify({
-							function: { type: "string", required: true },
-							params: {
-								type: "Map<string, string>",
-								required: false,
+						)}\nSchema: ${JSON.stringify(
+							{
+								function: { type: "string", required: true },
+								params: {
+									type: "Map<string, string>",
+									required: false,
+								},
 							},
-						})}\nHistory: ${JSON.stringify(history)}`,
+							null,
+							4,
+						)}\nReturn null if none match. Return null if none match. Return null if none match.`,
 					},
-					{ role: "user", content: query },
+					{
+						role: "user",
+						content: `History: []\nQuery: "Write me a cute story"`,
+					},
+					{
+						role: "assistant",
+						content: `null`,
+					},
+					{
+						role: "user",
+						content: `History: ${JSON.stringify(history, null, 4)}\nQuery: ${query}`,
+					},
 				],
 				stream: false,
 				format: "json",
@@ -107,7 +125,11 @@ export class FunctionCaller<T extends FunctionSchema> {
 			const param = schema.params[key];
 			fnParams[key] = params[key] as any;
 		}
-		return this.fnMap[fn](fnParams as any);
+		return this.fnMap[fn].fn(fnParams as any);
+	}
+
+	getIcon(fn: keyof T) {
+		return this.fnMap[fn].icon;
 	}
 
 	async getSuggestion(query: string, history: Message[]) {
