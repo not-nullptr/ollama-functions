@@ -61,7 +61,47 @@
 				easing: ease,
 				fill: "forwards",
 			},
-		);
+		).onfinish = () => {
+			imgContainer.style.transformOrigin = "center";
+			imgContainer.animate(
+				[
+					{
+						transform: "rotate(0deg)",
+						easing: "ease-in",
+					},
+					{
+						transform: "rotate(360deg)",
+					},
+				],
+				{
+					duration: duration * 3,
+					fill: "forwards",
+					delay: 250,
+				},
+			).onfinish = () => {
+				imgContainer.animate(
+					[
+						{
+							transform: "rotate(0deg)",
+						},
+						{
+							transform: "rotate(360deg)",
+						},
+					],
+					{
+						duration: duration * 2,
+						fill: "forwards",
+						easing: "linear",
+						iterations: Infinity,
+					},
+				);
+			};
+		};
+		setTimeout(() => {
+			const cssAnim = spinner.getAnimations().find((a) => a.id !== "color");
+			if (!cssAnim) return;
+			cssAnim.playbackRate = 2;
+		}, duration / 2);
 		spinner.animate(
 			[
 				{
@@ -162,6 +202,9 @@
 				.filter((a) => a.id === "color")
 				.forEach((animation) => animation.cancel());
 			loadContainer.style.transformOrigin = "top";
+			imgContainer.style.transformOrigin = "right";
+			const cssAnim = spinner.getAnimations().find((a) => a.id !== "color");
+			if (cssAnim) cssAnim.playbackRate = 1;
 		};
 	};
 </script>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from "$app/environment";
-	import { model, ollama } from "$lib/ai";
+	import { host, model, ollama } from "$lib/ai";
 	import { FunctionCaller } from "$lib/fncaller";
 	import type { Message } from "ollama/browser";
 	import { onMount, tick } from "svelte";
@@ -46,7 +46,7 @@
 		[];
 	let newMsgOpts: Partial<(typeof chatHistory)[0]> = {};
 
-	let on = true;
+	let on = false;
 	$: console.log(chatHistory);
 	$: {
 		on;
@@ -101,19 +101,25 @@
 			setGpuRgbLight: {
 				description: "Sets the RGB light on the user's GPU",
 				params: {
-					red: {
-						description: "The red value of the RGB light, (0 - 255)",
-						type: "number",
-						required: true,
-					},
-					green: {
-						description: "The green value of the RGB light (0 - 255)",
-						type: "number",
-						required: true,
-					},
-					blue: {
-						description: "The blue value of the RGB light (0 - 255)",
-						type: "number",
+					// red: {
+					// 	description: "The red value of the RGB light, (0 - 255)",
+					// 	type: "number",
+					// 	required: true,
+					// },
+					// green: {
+					// 	description: "The green value of the RGB light (0 - 255)",
+					// 	type: "number",
+					// 	required: true,
+					// },
+					// blue: {
+					// 	description: "The blue value of the RGB light (0 - 255)",
+					// 	type: "number",
+					// 	required: true,
+					// },
+					colorName: {
+						description:
+							"The name of the color specified by the user, including any adjectives",
+						type: "string",
 						required: true,
 					},
 				},
@@ -166,27 +172,70 @@
 			// 	},
 			// 	icon: "https://s2.googleusercontent.com/s2/favicons?sz=64&domain_url=https://discord.com",
 			// },
-			// async createTweet({ tweet }) {
-			// 	console.log("Posting", tweet);
-			// 	const res = await postTweet(
-			// 		`${tweet.replace(/\n+/g, ". ")} (DISCLAIMER: TWEETED BY AI)`,
-			// 	);
-			// 	const url = `https://twitter.com/${res.tweetBy.userName}/status/${res.id}`;
-			// 	const req = await fetch(
-			// 		"https://api.allorigins.win/get?url=" + encodeURIComponent(url),
-			// 	);
-			// 	const data = await req.json();
-			// 	const doc = new DOMParser().parseFromString(data.contents, "text/html");
-			// 	const title = doc.title;
-			// 	newMsgOpts = {
-			// 		source: `https://twitter.com/${res.tweetBy.userName}/status/${res.id}`,
-			// 		title,
-			// 	};
-			// 	return `Tell the user that you just posted a tweet for them, with the following content:\n\n${tweet}\n\nTell the user that you posted the tweet, and tell them the contents, and provide some commentary on it.`;
+			// createTweet: {
+			// 	fn: async ({ tweet }) => {
+			// 		console.log("Posting", tweet);
+			// 		const res = await postTweet(
+			// 			`${tweet.replace(/\n+/g, ". ")} (DISCLAIMER: TWEETED BY AI)`,
+			// 		);
+			// 		const url = `https://twitter.com/${res.tweetBy.userName}/status/${res.id}`;
+			// 		const req = await fetch(
+			// 			"https://api.allorigins.win/get?url=" + encodeURIComponent(url),
+			// 		);
+			// 		const data = await req.json();
+			// 		const doc = new DOMParser().parseFromString(data.contents, "text/html");
+			// 		const title = doc.title;
+			// 		newMsgOpts = {
+			// 			source: `https://twitter.com/${res.tweetBy.userName}/status/${res.id}`,
+			// 			title,
+			// 		};
+			// 		return `Tell the user that you just posted a tweet for them, with the following content:\n\n${tweet}\n\nTell the user that you posted the tweet, and tell them the contents, and provide some commentary on it.`;
+			// 	},
+			// 	icon: "https://s2.googleusercontent.com/s2/favicons?sz=64&domain_url=https://twitter.com",
 			// },
 			setGpuRgbLight: {
-				fn: async ({ red, green, blue }) => {
+				fn: async ({ colorName }) => {
+					console.log("Setting RGB light to", colorName);
 					try {
+						const rgb = await fetch(`${host}/api/chat`, {
+							method: "POST",
+							body: JSON.stringify({
+								model,
+								messages: [
+									{
+										role: "system",
+										content: `Given a description of a colour, come up with an RGB value to describe it, in the format:\n${JSON.stringify(
+											{
+												red: "number (0 - 255)",
+												green: "number (0 - 255)",
+												blue: "number (0 - 255)",
+											},
+											null,
+											2,
+										)}`,
+									},
+									{
+										role: "user",
+										content: "baby blue",
+									},
+									{
+										role: "assistant",
+										content: JSON.stringify({
+											red: 140,
+											green: 207,
+											blue: 230,
+										}),
+									},
+									{
+										role: "user",
+										content: colorName,
+									},
+								],
+								stream: false,
+								format: "json",
+							}),
+						});
+						const { red, green, blue } = JSON.parse((await rgb.json()).message.content);
 						console.log("Setting RGB light to", red, green, blue);
 						await fetch(`/gpu?rgb=${red},${green},${blue}`);
 						return `Assistant has set the RGB value. Inform the user that the RGB light on their GPU has been set. Success!`;
@@ -303,7 +352,6 @@
 				"https://s2.googleusercontent.com/s2/favicons?domain=undefined&sz=64";
 			await tick();
 			await triggerFunction();
-			await new Promise((resolve) => setTimeout(resolve, 500)); // admire the animation lol
 
 			const fnRes = await fnCaller.callFunction(fn);
 			sysPrompt += `Use the following between <context> XML tags to help answer the user's question. Do not reference the context, do not mention "context" to the user, do not output the full context XML, only use the facts inside of it.\n<context>\n  ${fnRes}\n</context>`;
@@ -319,7 +367,7 @@
 			stream: true,
 		});
 		cancelInference();
-		await new Promise((resolve) => setTimeout(resolve, 400));
+		await new Promise((resolve) => setTimeout(resolve, 400)); // necessary for the animation to show
 		for await (const message of chat) {
 			chatHistory[chatHistory.length - 1].content += message.message.content;
 			if (message.done) {
@@ -331,12 +379,6 @@
 			fixContainerScroll();
 			fixInputSize();
 		}
-	};
-
-	const thisSucks = (md: string) => {
-		return marked(md, {
-			async: false,
-		}) as string;
 	};
 </script>
 
