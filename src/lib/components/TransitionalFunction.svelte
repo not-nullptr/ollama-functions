@@ -5,6 +5,7 @@
 	let imgContainer: HTMLDivElement;
 	let spinner: HTMLSpanElement;
 	let loadContainer: HTMLDivElement;
+	let loadContainerInternal: HTMLDivElement;
 
 	export let iconUrl =
 		"https://s2.googleusercontent.com/s2/favicons?sz=64&domain_url=https://twitter.com";
@@ -95,6 +96,29 @@
 						iterations: Infinity,
 					},
 				);
+				loadContainer.style.transformOrigin = "center";
+				loadContainer.animate(
+					[
+						{
+							transform: "translateY(0) scale(1.1, 0.9)",
+							easing: "cubic-bezier(0,1,1,1)",
+						},
+						{
+							transform: "translateY(-16px) scale(0.9, 1.1)",
+							easing: "cubic-bezier(1,0,1,1)",
+						},
+						{
+							transform: "translateY(0) scale(1)",
+							easing: "cubic-bezier(0,1,1,1)",
+						},
+					],
+					{
+						duration: duration * 1.5,
+						easing: ease,
+						fill: "forwards",
+						iterations: Infinity,
+					},
+				);
 			};
 		};
 		setTimeout(() => {
@@ -121,26 +145,31 @@
 				id: "color",
 			},
 		);
+		loadContainer.style.transformOrigin = "right";
 		loadContainer.animate(
 			[
 				{
-					transform: "translateX(0)",
+					transform: "translateX(0) scale(1)",
 					easing: "ease-in",
 				},
 				{
-					transform: "translateX(8px)",
+					transform: "scale(0.8, 1.3) translateX(8px)",
 					easing: "ease-out",
 				},
 				{
-					transform: "translateX(0)",
+					transform: "scale(1.05, 0.95) translateX(-1px)",
 					easing: "ease-in",
+				},
+				{
+					transform: "scale(1)",
+					easing: "ease-out",
 				},
 			],
 			{
-				duration,
+				duration: duration * 1.5,
 				easing: ease,
 				fill: "forwards",
-				delay: duration / 3 - 128,
+				delay: duration / 3 - 160,
 			},
 		);
 	};
@@ -170,10 +199,12 @@
 				},
 			],
 			{
-				duration,
+				duration: duration,
 				fill: "forwards",
 			},
-		);
+		).onfinish = () => {
+			loadContainer.style.transformOrigin = "right";
+		};
 	};
 
 	export const cancelInference = () => {
@@ -210,22 +241,24 @@
 </script>
 
 <div bind:this={loadContainer} class="relative w-10 h-10 origin-top mt-4 mb-2 opacity-0">
-	<span
-		style="border-bottom-color: {defaultColor}"
-		bind:this={spinner}
-		class="w-10 h-10 spin border-[5px] border-gray-200 rounded-[50%] inline-block box-border"
-	/>
-	<div
-		bind:this={imgContainer}
-		class="absolute origin-right top-0 left-0 opacity-0 w-full h-full flex items-center justify-center"
-	>
-		<img
-			crossorigin="anonymous"
-			bind:this={img}
-			src="/cors?url={encodeURIComponent(iconUrl)}"
-			alt="hero"
-			class="w-5 h-5 rounded-full"
+	<div bind:this={loadContainerInternal}>
+		<span
+			style="border-bottom-color: {defaultColor}"
+			bind:this={spinner}
+			class="w-10 h-10 spin border-[5px] border-black/20 rounded-[50%] inline-block box-border"
 		/>
+		<div
+			bind:this={imgContainer}
+			class="absolute origin-right top-0 left-0 opacity-0 w-full h-full flex items-center justify-center"
+		>
+			<img
+				crossorigin="anonymous"
+				bind:this={img}
+				src="/cors?url={encodeURIComponent(iconUrl)}"
+				alt="hero"
+				class="w-5 h-5 rounded-full"
+			/>
+		</div>
 	</div>
 </div>
 

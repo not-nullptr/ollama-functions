@@ -21,29 +21,12 @@
 	let cancelInference: () => void;
 	let triggerFunction: () => Promise<void>;
 	let iconUrl: string;
+	let error = false;
 
 	let chatHistory: (Message & {
 		source?: string;
 		title?: string;
-	})[] =
-		// [
-		// 	{
-		// 		role: "system",
-		// 		content:
-		// 			'You are LLaMA, a helpful, witty, fun-to-chat-with but not over-the-top AI assistant. Current date is 22/04/2024, current time is 16:32:27. Use the following between <context> XML tags to help answer the user\'s question. Do not reference the context, do not mention "context" to the user, do not output the full context XML, only use the facts inside of it.\n<context>\n  Tweet successfully posted. Make sure to tell the user the Tweet Content.\n{\n    "tweetedContent": "Hey everyone, just a reminder that it\'s okay to take a step back and breathe. You\'ve got this! Have a great afternoon!"\n}\n</context>',
-		// 	},
-		// 	{
-		// 		role: "user",
-		// 		content: "could you post an afternoon motivational message for my followers?",
-		// 	},
-		// 	{
-		// 		role: "assistant",
-		// 		content:
-		// 			"You've already got a tweet ready to go!\n\nHere's the content: \"Hey everyone, just a reminder that it's okay to take a step back and breathe. You've got this! Have a great afternoon!\"",
-		// 		source: "https://twitter.com/notnullptr/status/1782432319179010260",
-		// 	},
-		// ];
-		[];
+	})[] = [];
 	let newMsgOpts: Partial<(typeof chatHistory)[0]> = {};
 
 	let on = false;
@@ -87,41 +70,42 @@
 			// 	description: "Gets the user's unread Discord mentions",
 			// 	params: {},
 			// },
-			// createTweet: {
-			// 	description: "!! DO NOT USE UNLESS USER ASKS SPECIFICALLY !! . Posts a tweet",
-			// 	params: {
-			// 		tweet: {
-			// 			description:
-			// 				"Write a tweet from the prompt, from the perspective of the user.",
-			// 			type: "string",
-			// 			required: true,
-			// 		},
-			// 	},
-			// },
-			setGpuRgbLight: {
-				description: "Sets the RGB light on the user's GPU",
+			createTweet: {
+				description:
+					'Posts a Tweet. Do not use, unless the user specifically says "post a tweet", "write a tweet" or similar.',
 				params: {
-					// red: {
-					// 	description: "The red value of the RGB light, (0 - 255)",
-					// 	type: "number",
-					// 	required: true,
-					// },
-					// green: {
-					// 	description: "The green value of the RGB light (0 - 255)",
-					// 	type: "number",
-					// 	required: true,
-					// },
-					// blue: {
-					// 	description: "The blue value of the RGB light (0 - 255)",
-					// 	type: "number",
-					// 	required: true,
-					// },
-					colorName: {
+					tweet: {
 						description:
-							"The name of the color specified by the user, including any adjectives",
+							"Write a tweet from the prompt, from the perspective of the user.",
 						type: "string",
 						required: true,
 					},
+				},
+			},
+			setGpuRgbLight: {
+				description: "Sets the RGB light on the user's GPU",
+				params: {
+					red: {
+						description: "The red value of the RGB light, (0 - 255)",
+						type: "number",
+						required: true,
+					},
+					green: {
+						description: "The green value of the RGB light (0 - 255)",
+						type: "number",
+						required: true,
+					},
+					blue: {
+						description: "The blue value of the RGB light (0 - 255)",
+						type: "number",
+						required: true,
+					},
+					// colorName: {
+					// 	description:
+					// 		"The name of the color specified by the user, including any adjectives",
+					// 	type: "string",
+					// 	required: true,
+					// },
 				},
 			},
 			getChatTheme: {
@@ -139,6 +123,10 @@
 					},
 				},
 			},
+			// loadInfinitely: {
+			// 	description: "Causes the LLM to load infinitely.",
+			// 	params: {},
+			// },
 		},
 		{
 			// getDiscordMentions: {
@@ -172,73 +160,71 @@
 			// 	},
 			// 	icon: "https://s2.googleusercontent.com/s2/favicons?sz=64&domain_url=https://discord.com",
 			// },
-			// createTweet: {
-			// 	fn: async ({ tweet }) => {
-			// 		console.log("Posting", tweet);
-			// 		const res = await postTweet(
-			// 			`${tweet.replace(/\n+/g, ". ")} (DISCLAIMER: TWEETED BY AI)`,
-			// 		);
-			// 		const url = `https://twitter.com/${res.tweetBy.userName}/status/${res.id}`;
-			// 		const req = await fetch(
-			// 			"https://api.allorigins.win/get?url=" + encodeURIComponent(url),
-			// 		);
-			// 		const data = await req.json();
-			// 		const doc = new DOMParser().parseFromString(data.contents, "text/html");
-			// 		const title = doc.title;
-			// 		newMsgOpts = {
-			// 			source: `https://twitter.com/${res.tweetBy.userName}/status/${res.id}`,
-			// 			title,
-			// 		};
-			// 		return `Tell the user that you just posted a tweet for them, with the following content:\n\n${tweet}\n\nTell the user that you posted the tweet, and tell them the contents, and provide some commentary on it.`;
-			// 	},
-			// 	icon: "https://s2.googleusercontent.com/s2/favicons?sz=64&domain_url=https://twitter.com",
-			// },
+			createTweet: {
+				fn: async ({ tweet }) => {
+					console.log("Posting", tweet);
+					const res = await postTweet(
+						`${tweet.replace(/\n+/g, ". ")} (DISCLAIMER: TWEETED BY AI)`,
+					);
+					const url = `https://twitter.com/${res.tweetBy.userName}/status/${res.id}`;
+					newMsgOpts = {
+						source: url,
+						title: `${res.tweetBy.userName} on Twitter: ${tweet}`,
+					};
+					return `Tell the user that you just posted a tweet for them, with the following content:\n\n${tweet}\n\nTell the user that you posted the tweet, and tell them the contents, and provide some commentary on it.`;
+				},
+				icon: "https://s2.googleusercontent.com/s2/favicons?sz=64&domain_url=https://twitter.com",
+			},
 			setGpuRgbLight: {
-				fn: async ({ colorName }) => {
-					console.log("Setting RGB light to", colorName);
+				// fn: async ({ colorName }) => {
+				fn: async ({ red, green, blue }) => {
+					red = red || 0;
+					green = green || 0;
+					blue = blue || 0;
+					// console.log("Setting RGB light to", colorName);
 					try {
-						const rgb = await fetch(`${host}/api/chat`, {
-							method: "POST",
-							body: JSON.stringify({
-								model,
-								messages: [
-									{
-										role: "system",
-										content: `Given a description of a colour, come up with an RGB value to describe it, in the format:\n${JSON.stringify(
-											{
-												red: "number (0 - 255)",
-												green: "number (0 - 255)",
-												blue: "number (0 - 255)",
-											},
-											null,
-											2,
-										)}`,
-									},
-									{
-										role: "user",
-										content: "baby blue",
-									},
-									{
-										role: "assistant",
-										content: JSON.stringify({
-											red: 140,
-											green: 207,
-											blue: 230,
-										}),
-									},
-									{
-										role: "user",
-										content: colorName,
-									},
-								],
-								stream: false,
-								format: "json",
-							}),
-						});
-						const { red, green, blue } = JSON.parse((await rgb.json()).message.content);
+						// const rgb = await fetch(`${host}/api/chat`, {
+						// 	method: "POST",
+						// 	body: JSON.stringify({
+						// 		model,
+						// 		messages: [
+						// 			{
+						// 				role: "system",
+						// 				content: `Given a description of a colour, come up with an RGB value to describe it, in the format:\n${JSON.stringify(
+						// 					{
+						// 						red: "number (0 - 255)",
+						// 						green: "number (0 - 255)",
+						// 						blue: "number (0 - 255)",
+						// 					},
+						// 					null,
+						// 					2,
+						// 				)}`,
+						// 			},
+						// 			{
+						// 				role: "user",
+						// 				content: "baby blue",
+						// 			},
+						// 			{
+						// 				role: "assistant",
+						// 				content: JSON.stringify({
+						// 					red: 140,
+						// 					green: 207,
+						// 					blue: 230,
+						// 				}),
+						// 			},
+						// 			{
+						// 				role: "user",
+						// 				content: colorName,
+						// 			},
+						// 		],
+						// 		stream: false,
+						// 		format: "json",
+						// 	}),
+						// });
+						// const { red, green, blue } = JSON.parse((await rgb.json()).message.content);
 						console.log("Setting RGB light to", red, green, blue);
 						await fetch(`/gpu?rgb=${red},${green},${blue}`);
-						return `Assistant has set the RGB value. Inform the user that the RGB light on their GPU has been set. Success!`;
+						return `Inform the user that you have set RGB light on their GPU. Success!`;
 					} catch {
 						return "An error occurred while setting the RGB light on the user's GPU.";
 					}
@@ -249,6 +235,14 @@
 				fn: () => (on ? "Current theme is light" : "Current theme is dark"),
 				icon: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTnEo1pmjomnVL7tL5Zf4zGsrw0ZB99Y9I3rozNkNhhrQ&s",
 			},
+			// loadInfinitely: {
+			// 	fn: () => {
+			// 		return new Promise(() => {
+			// 			console.log("!");
+			// 		});
+			// 	},
+			// 	icon: "https://pbs.twimg.com/profile_images/1744316680505880576/CB9u_cmy_400x400.jpg",
+			// },
 			// setThemeState({ theme }) {
 			// 	console.log("setting to", theme);
 			// 	on = theme;
@@ -308,6 +302,7 @@
 		if (!input) return;
 		input.style.height = "0px";
 		input.style.height = input.scrollHeight + "px";
+		fixContainerScroll();
 	};
 
 	const fixContainerScroll = async () => {
@@ -318,7 +313,11 @@
 	const keyDown = (e: KeyboardEvent) => {
 		if (e.key === "Enter" && !e.shiftKey && input.value.trim().length > 0) {
 			e.preventDefault();
-			sendMessage();
+			try {
+				sendMessage();
+			} catch {
+				error = true;
+			}
 		}
 	};
 
@@ -402,6 +401,7 @@
 		</div>
 		{#if message.source}
 			<a
+				title={message.title}
 				target="_blank"
 				href={message.source}
 				class="select-none transition-all duration-200 ease-in-out hover:bg-gray-300 active:bg-gray-400 active:border-gray-400 cursor-pointer w-[300px] items-center gap-2 flex rounded-lg border-2 border-gray-300 whitespace-nowrap overflow-hidden overflow-ellipsis text-sm mt-4 p-2 px-3 bg-gray-100"
@@ -420,6 +420,17 @@
 		{/if}
 		<br />
 	{/each}
+	{#if error}
+		<div class="text-red-500 -mt-28">
+			<div>An error occurred while processing your request.</div>
+			<button
+				class="border-2 mt-4 border-gray-200 rounded-lg py-2 px-4"
+				on:click={() => window.location.reload}
+			>
+				Reload
+			</button>
+		</div>
+	{/if}
 	{#if !yapping}
 		<b>user</b>
 		<textarea

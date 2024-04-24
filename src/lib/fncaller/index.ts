@@ -67,19 +67,19 @@ export class FunctionCaller<T extends FunctionSchema> {
 				messages: [
 					{
 						role: "system",
-						content: `Return null if none match. Based on the given history and query, return a function from the schema with the parameters filled in. Return null if none match. Return \"null\" if no functions are relevant to the query and history.\nFunctions: ${JSON.stringify(
+						content: `Functions: ${JSON.stringify(
 							this.schema,
 						)}\nSchema: ${JSON.stringify(
 							{
-								function: { type: "string", required: true },
+								function: { type: "string", required: false },
 								params: {
-									type: "Map<string, string>",
+									type: "Map<string, any>",
 									required: false,
 								},
 							},
 							null,
 							4,
-						)}\nReturn null if none match. Return null if none match. Return null if none match.`,
+						)}\n\nReturn a function from the list with the parameters filled in, using the format provided, with a string \"function\" and a map called \"params\". You are not required to return a function, only if the user asks for one in the list, or if the chat history and current message imply that the user wants one.`,
 					},
 					{
 						role: "user",
@@ -91,7 +91,7 @@ export class FunctionCaller<T extends FunctionSchema> {
 					},
 					{
 						role: "user",
-						content: `History: ${JSON.stringify(history, null, 4)}\nQuery: ${query}`,
+						content: `History: \n${history.map((h) => `${h.role}: ${h.content}`).join("\n")}\n\nQuery: ${query}`,
 					},
 				],
 				stream: false,
