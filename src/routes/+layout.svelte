@@ -5,7 +5,7 @@
 	import { settingsStore } from "$lib/settings";
 	import { toolsStore } from "$lib/fncaller";
 	import { ai } from "$lib/ai";
-	import { Ollama } from "ollama";
+	import { Ollama } from "ollama/browser";
 
 	onMount(() => {
 		$toolsStore.fns = JSON.parse(localStorage.getItem("functions") || "{}");
