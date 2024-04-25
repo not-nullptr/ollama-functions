@@ -20,6 +20,7 @@
 		ai.ollama = new Ollama({
 			host: $settingsStore.ollamaUrl || "http://127.0.0.1:11434",
 		});
+
 		return () => {
 			unsubscribeSettings();
 			unsubscribeTools();

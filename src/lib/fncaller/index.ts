@@ -1,8 +1,9 @@
 import { browser } from "$app/environment";
 import { host, model } from "$lib/ai";
+import { settingsStore } from "$lib/settings";
 import type { ChatResponse, Message } from "ollama";
-import { writable } from "svelte/store";
-import typescript from "typescript";
+import { get, writable } from "svelte/store";
+// import typescript from "typescript";
 
 export type StringToType<T extends string> = T extends "number"
 	? number
@@ -62,7 +63,8 @@ export class FunctionCaller<T extends FunctionSchema> {
 	}
 	async getFunction(query: string, history: Message[]) {
 		console.log(this.schema);
-		const res = await fetch(`${host}/api/chat`, {
+		const settings = get(settingsStore);
+		const res = await fetch(`${settings.ollamaUrl}/api/chat`, {
 			method: "POST",
 			body: JSON.stringify({
 				model,
@@ -140,6 +142,7 @@ export class FunctionCaller<T extends FunctionSchema> {
 		for (const key in schema.params) {
 			fnParams[key] = params[key] as any;
 		}
+		const typescript = await import("typescript");
 		const transpiled = typescript.transpile(
 			this.fnMap[fn]?.fn || "function() { return null; }",
 			{

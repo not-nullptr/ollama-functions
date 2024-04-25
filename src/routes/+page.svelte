@@ -2,15 +2,13 @@
 	import { browser } from "$app/environment";
 	import { host, model, ai } from "$lib/ai";
 	import { FunctionCaller, messagesStore, toolsStore } from "$lib/fncaller";
-	import type { Message } from "ollama/browser";
+	import type { ChatResponse, Message } from "ollama/browser";
 	import { onMount, tick } from "svelte";
 	import type { Tweet } from "rettiwt-api";
-	// import type { UnreadIds } from "./dsc/+server";
-	import sanitize from "sanitize-html";
-	import { marked } from "marked";
 	import TransitionalFunction from "$lib/components/TransitionalFunction.svelte";
 	import CuteBall from "$lib/components/CuteBall.svelte";
 	import Settings from "$lib/components/Settings.svelte";
+	import { settingsStore } from "$lib/settings";
 
 	let input: HTMLTextAreaElement;
 	let container: HTMLDivElement;
@@ -192,15 +190,24 @@
 			...newMsgOpts,
 		};
 		chatHistory[0].content = sysPrompt;
-		const chat = await ai.ollama.chat({
-			model,
-			messages: [...chatHistory.slice(0, -1)],
-			stream: true,
+		const chatReq = await fetch(`${$settingsStore.ollamaUrl}/api/chat`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				model,
+				messages: [...chatHistory.slice(0, -1)],
+				stream: true,
+			}),
 		});
+		const body = chatReq.body;
+		if (!body) throw new Error("Failed to get response");
 		cancelInference();
 		await new Promise((resolve) => setTimeout(resolve, 400)); // necessary for the animation to show
 		await tick();
-		for await (const message of chat) {
+		const reader = body.getReader();
+		const handleMessage = async (message: ChatResponse) => {
 			await addText(
 				() => {
 					chatHistory[chatHistory.length - 1].content += message.message.content;
@@ -215,7 +222,22 @@
 			}
 			fixContainerScroll();
 			fixInputSize();
-		}
+		};
+		const read = async ({ done, value }: ReadableStreamReadResult<Uint8Array>) => {
+			if (done) {
+				return;
+			}
+			const string = new TextDecoder().decode(value);
+			const objs = string
+				.split("\n")
+				.filter((v) => !!v)
+				.map((v) => JSON.parse(v)) as ChatResponse[];
+			for await (const obj of objs) {
+				await handleMessage(obj);
+			}
+			reader.read().then(read);
+		};
+		reader.read().then(read);
 	};
 
 	onMount(() => {
