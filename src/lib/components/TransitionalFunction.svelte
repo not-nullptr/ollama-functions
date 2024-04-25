@@ -8,7 +8,7 @@
 	let loadContainerInternal: HTMLDivElement;
 
 	export let iconUrl =
-		"https://s2.googleusercontent.com/s2/favicons?sz=64&domain_url=https://twitter.com";
+		"https://s2.googleusercontent.com/s2/favicons?sz=48&domain_url=https://ollama.com";
 
 	const defaultColor = "#3b82f6";
 	const duration = 360;

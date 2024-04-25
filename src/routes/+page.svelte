@@ -9,9 +9,18 @@
 	import sanitize from "sanitize-html";
 	import { marked } from "marked";
 	import TransitionalFunction from "$lib/components/TransitionalFunction.svelte";
+	import CuteBall from "$lib/components/CuteBall.svelte";
 
 	let input: HTMLTextAreaElement;
 	let container: HTMLDivElement;
+
+	let inferenceContainer: HTMLDivElement;
+	let addText: (cb: () => void, getContainerBounds: () => DOMRect) => Promise<void> = async (
+		cb,
+	) => {
+		cb();
+	};
+
 	let suggestion = "";
 	// let mentions: UnreadIds | null = null;
 
@@ -29,8 +38,7 @@
 	})[] = [];
 	let newMsgOpts: Partial<(typeof chatHistory)[0]> = {};
 
-	let on = false;
-	$: console.log(chatHistory);
+	let on = true;
 	$: {
 		on;
 		console.log(on);
@@ -72,7 +80,7 @@
 			// },
 			createTweet: {
 				description:
-					'Posts a Tweet. Do not use, unless the user specifically says "post a tweet", "write a tweet" or similar.',
+					'Posts a Tweet. Only use when the user uses the phrases "post a tweet", "write a tweet" or similar.',
 				params: {
 					tweet: {
 						description:
@@ -81,6 +89,13 @@
 						required: true,
 					},
 				},
+				requiredPhrases: [
+					"post a tweet",
+					"write a tweet",
+					"tweet",
+					"post that to twitter",
+					"tweet that",
+				],
 			},
 			setGpuRgbLight: {
 				description: "Sets the RGB light on the user's GPU",
@@ -111,6 +126,7 @@
 			getChatTheme: {
 				description: "Gets the current chat theme.",
 				params: {},
+				requiredPhrases: ["theme"],
 			},
 			setChatTheme: {
 				description: "Sets the current chat theme",
@@ -122,7 +138,25 @@
 						required: true,
 					},
 				},
+				requiredPhrases: ["theme"],
 			},
+			// searchWikipedia: {
+			// 	description:
+			// 		"Searches Wikipedia for an article, and then returns a relevant section.",
+			// 	params: {
+			// 		articleName: {
+			// 			description: "The name of the article to search for.",
+			// 			type: "string",
+			// 			required: true,
+			// 		},
+			// 		query: {
+			// 			description:
+			// 				"The query to search for in the article. Relies on a Vector DB, so summarization won't work.",
+			// 			type: "string",
+			// 			required: true,
+			// 		},
+			// 	},
+			// },
 			// loadInfinitely: {
 			// 	description: "Causes the LLM to load infinitely.",
 			// 	params: {},
@@ -259,6 +293,12 @@
 				},
 				icon: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTnEo1pmjomnVL7tL5Zf4zGsrw0ZB99Y9I3rozNkNhhrQ&s",
 			},
+			// searchWikipedia: {
+			// 	fn: ({ articleName }) => {
+			// 		return ``;
+			// 	},
+			// 	icon: "https://s2.googleusercontent.com/s2/favicons?sz=64&domain_url=https://wikipedia.org",
+			// },
 		},
 	);
 
@@ -345,14 +385,28 @@
 			sysPrompt += `You are LLaMA, a helpful, witty, fun-to-chat-with but not over-the-top AI assistant. Current date is ${new Date().toLocaleDateString()}, current time is ${new Date().toLocaleTimeString()}. `;
 		}
 		const fn = await fnCaller.getFunction(query, chatHistory);
-		if (fn?.function) {
+		// sometimes it outputs like { "name": {"param1": "value"} }
+		const potentialFn = Object.keys(fn)[0];
+		if (
+			(fn?.function !== null && fn?.function !== undefined) ||
+			(potentialFn !== null &&
+				potentialFn !== undefined &&
+				fnCaller.isInFunctions(potentialFn))
+		) {
+			console.log(fn?.function, potentialFn);
+			const params = fn?.params || (fn as any)[potentialFn];
 			iconUrl =
-				fnCaller.getIcon(fn.function) ||
+				fnCaller.getIcon(fn?.function || potentialFn) ||
 				"https://s2.googleusercontent.com/s2/favicons?domain=undefined&sz=64";
 			await tick();
 			await triggerFunction();
 
-			const fnRes = await fnCaller.callFunction(fn);
+			const fnRes = await fnCaller.callFunction(
+				fn || {
+					function: potentialFn,
+					params,
+				},
+			);
 			sysPrompt += `Use the following between <context> XML tags to help answer the user's question. Do not reference the context, do not mention "context" to the user, do not output the full context XML, only use the facts inside of it.\n<context>\n  ${fnRes}\n</context>`;
 		}
 		chatHistory[chatHistory.length - 1] = {
@@ -367,8 +421,14 @@
 		});
 		cancelInference();
 		await new Promise((resolve) => setTimeout(resolve, 400)); // necessary for the animation to show
+		await tick();
 		for await (const message of chat) {
-			chatHistory[chatHistory.length - 1].content += message.message.content;
+			await addText(
+				() => {
+					chatHistory[chatHistory.length - 1].content += message.message.content;
+				},
+				() => inferenceContainer.getBoundingClientRect(),
+			);
 			if (message.done) {
 				yapping = false;
 				newMsgOpts = {};
@@ -385,10 +445,10 @@
 	bind:this={container}
 	class="max-w-[1200px] p-4 overflow-y-auto py-8 ml-auto mr-auto w-screen h-screen text-xl"
 >
-	{#each chatHistory.filter((c) => c.role !== "system") as message}
+	{#each chatHistory.filter((c) => c.role !== "system") as message, i}
 		<div>
 			<b>{message.role}</b>
-			<div class="whitespace-pre-wrap">
+			<div class="whitespace-pre-wrap" bind:this={inferenceContainer}>
 				{#if !message.content && message.role === "assistant"}
 					<TransitionalFunction
 						bind:beginInference
@@ -396,7 +456,9 @@
 						bind:triggerFunction
 						bind:iconUrl
 					/>
-				{/if}{message.content}
+				{/if}{message.content}{#if message.role === "assistant" && i === chatHistory.length - 2 && yapping && message.content}
+					<CuteBall bind:addText />
+				{/if}
 			</div>
 		</div>
 		{#if message.source}
