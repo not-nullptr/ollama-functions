@@ -94,7 +94,10 @@
 			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
 			run: () => {
 				const code = editor.getValue();
-				$toolsStore.fns[schemaName] = { fn: code };
+				$toolsStore.fns[schemaName] = {
+					...$toolsStore.fns[schemaName],
+					fn: code,
+				};
 			},
 		});
 		const fns = $toolsStore.fns;
