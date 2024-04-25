@@ -2,7 +2,7 @@ module.exports = {
 	apps: [
 		{
 			name: "ollama-functions",
-			script: "./build/index.js",
+			script: "node build",
 			env_production: {
 				NODE_ENV: "production",
 				PORT: "3000",
