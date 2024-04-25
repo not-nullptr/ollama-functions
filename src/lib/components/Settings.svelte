@@ -38,7 +38,10 @@
 	};
 
 	const getSetting = (key: string) => {
-		return $settingsStore[key as keyof typeof settingsSchema];
+		return (
+			$settingsStore[key as keyof typeof settingsSchema] ||
+			(settingsSchema as any)[key].default
+		);
 	};
 
 	const clearSettings = () => {
@@ -110,7 +113,7 @@
 	out:dumbTransitionOut={{}}
 	style="transition: all 0.5s ease; transform: translateY(-{open ? panelHeight : 0}px)"
 >
-	<div id="mainContent">
+	<div id="mainContent" class="w-screen flex items-center justify-center">
 		<slot />
 	</div>
 	<button

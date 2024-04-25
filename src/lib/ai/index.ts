@@ -1,6 +1,6 @@
 import { Ollama } from "ollama/browser";
 
-export const model = "mistral:latest";
+export const model = "llama3:8b";
 
 export let ai = {
 	ollama: new Ollama({
