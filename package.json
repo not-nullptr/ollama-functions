@@ -37,6 +37,7 @@
 		"@catppuccin/vscode": "^3.14.0",
 		"@langchain/community": "^0.0.51",
 		"@mozilla/readability": "^0.5.0",
+		"@sveltejs/adapter-node": "^5.0.1",
 		"buffer": "^6.0.3",
 		"discord-api-types": "^0.37.79",
 		"discord-protos": "^1.0.5",
