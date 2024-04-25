@@ -42,7 +42,6 @@
 		"discord-api-types": "^0.37.79",
 		"discord-protos": "^1.0.5",
 		"fast-average-color": "^9.4.0",
-		"hnswlib-node": "^3.0.0",
 		"iconify-icon": "^2.1.0",
 		"jsdom": "^24.0.0",
 		"langchain": "^0.1.35",
