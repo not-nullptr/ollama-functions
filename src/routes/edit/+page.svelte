@@ -42,6 +42,7 @@
 
 	const updateToolIcon = (name: string, iconUrl: string) => {
 		$toolsStore.fns[name].icon = iconUrl;
+		$toolsStore = { ...$toolsStore };
 	};
 
 	const dumbTransitionIn = (node: HTMLElement, opts: {}) => {
