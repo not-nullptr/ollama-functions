@@ -30,10 +30,9 @@ const defaults = Object.fromEntries(
 	Object.entries(settingsSchema).map(([key, value]) => [key, value.default]),
 );
 
-export const settingsStore = writable<Mutable>(
-	browser
-		? JSON.parse(localStorage.getItem("settings") || JSON.stringify(defaults))
-		: defaults ||
-				// map the settingsSchema such that it becomes { name: default }
-				defaults,
-);
+const local = browser ? JSON.parse(localStorage.getItem("settings") || "null") : null;
+
+export const settingsStore = writable<Mutable>({
+	...defaults,
+	...local,
+});

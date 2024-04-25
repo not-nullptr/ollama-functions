@@ -26,9 +26,8 @@
 	};
 
 	export const triggerFunction = async () => {
-		console.log("!");
 		await onLoad();
-		console.log("!!");
+
 		const fac = new FastAverageColor();
 		const color = await fac.getColorAsync(img);
 		// if all the values are greater than 220, it's close to white

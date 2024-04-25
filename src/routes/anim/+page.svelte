@@ -33,9 +33,7 @@
 		}, 100);
 	}
 
-	function resetGeneration() {
-		console.log("Reset Generation");
-	}
+	function resetGeneration() {}
 </script>
 
 <main class="p-4">

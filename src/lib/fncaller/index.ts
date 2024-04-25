@@ -62,7 +62,6 @@ export class FunctionCaller<T extends FunctionSchema> {
 		localStorage.setItem("aiFunctions", JSON.stringify(fnMapString));
 	}
 	async getFunction(query: string, history: Message[]) {
-		console.log(this.schema);
 		const settings = get(settingsStore);
 		const res = await fetch(`${settings.ollamaUrl}/api/chat`, {
 			method: "POST",
@@ -101,7 +100,7 @@ export class FunctionCaller<T extends FunctionSchema> {
 			}),
 		});
 		const response = (await res.json()) as ChatResponse;
-		console.log(response.message.content);
+
 		try {
 			const message = JSON.parse(
 				response.message.content.startsWith("null") ||
@@ -132,7 +131,6 @@ export class FunctionCaller<T extends FunctionSchema> {
 		function: keyof T;
 		params: { [key: string]: string };
 	}) {
-		console.log(fn, this.schema);
 		const schema = this.schema[fn];
 		if (!schema) return "";
 		console.log(`A function call was requested: ${String(fn)} (${schema.description})`);
@@ -150,7 +148,7 @@ export class FunctionCaller<T extends FunctionSchema> {
 				target: typescript.ScriptTarget.ES2017,
 			},
 		);
-		console.log(transpiled);
+
 		return eval(transpiled)?.(fnParams as any);
 	}
 

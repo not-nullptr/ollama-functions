@@ -40,6 +40,10 @@
 		$toolsStore = { ...$toolsStore };
 	};
 
+	const updateToolIcon = (name: string, iconUrl: string) => {
+		$toolsStore.fns[name].icon = iconUrl;
+	};
+
 	const dumbTransitionIn = (node: HTMLElement, opts: {}) => {
 		node.style.position = "fixed";
 		node.animate(
@@ -86,19 +90,33 @@
 					updateToolName(name, e.currentTarget.textContent || "");
 				}}
 				contenteditable
-				class="font-bold text-2xl outline-none"
+				class="font-bold text-2xl outline-none mb-2"
 			>
 				{name}
 			</h1>
-			<p
-				on:input={(e) => {
-					updateToolSchema(name, { description: e.currentTarget.textContent || "" });
-				}}
-				contenteditable
-				class="outline-none"
-			>
-				{item.description}
-			</p>
+			<details>
+				<summary>Display</summary>
+				<span>Description:</span>
+				<span
+					on:input={(e) => {
+						updateToolSchema(name, { description: e.currentTarget.textContent || "" });
+					}}
+					contenteditable
+					class="outline-none"
+				>
+					{item.description}
+				</span>
+				<br />
+				<span>Icon URL:</span>
+				<input
+					on:input={(e) => {
+						updateToolIcon(name, e.currentTarget.value);
+					}}
+					value={$toolsStore.fns[name].icon || ""}
+					class="outline-none w-full bg-transparent"
+				/>
+				<img src={$toolsStore.fns[name].icon} alt="Icon" class="w-12 h-12" />
+			</details>
 			<details>
 				<summary>Params</summary>
 				<div>

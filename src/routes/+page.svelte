@@ -44,7 +44,7 @@
 	// let on = true;
 	// $: {
 	// 	on;
-	// 	console.log(on);
+	//
 	// 	(() => {
 	// 		if (!browser) return;
 	// 		if (!on) {
@@ -70,7 +70,7 @@
 			body: JSON.stringify({ tweet }),
 		});
 		const data: { tweet: Tweet } = await res.json();
-		console.log(data);
+
 		if (!data.tweet.id) throw new Error("Failed to post tweet");
 		return data.tweet;
 	};
@@ -97,7 +97,7 @@
 	// 	},
 	// 	{
 	// 		arbitraryJs: async ({ code }) => {
-	// 			console.log(code);
+	//
 	// 			try {
 	// 				const res = eval(code);
 	// 				return `Code successfully ran: ${code}\n\nOutput: ${res}`;
@@ -168,7 +168,6 @@
 				fnCaller.isInFunctions(potentialFn)) ||
 			Array.isArray(fn)
 		) {
-			console.log(fn?.function, potentialFn);
 			const params = fn?.params || (fn as any)[potentialFn];
 			iconUrl =
 				fnCaller.getIcon(fn?.function || potentialFn) ||
@@ -182,7 +181,7 @@
 					params,
 				},
 			);
-			console.log(fnRes);
+
 			sysPrompt += `Use the following between <context> XML tags to help answer the user's question. Do not reference the context, do not mention "context" to the user, do not output the full context XML, only use the facts inside of it.\n<context>\n  ${fnRes}\n</context>`;
 		}
 		chatHistory[chatHistory.length - 1] = {
@@ -245,7 +244,6 @@
 		fixContainerScroll();
 		toolsStore.subscribe((val) => {
 			fnCaller.setFunctions(val.schema, val.fns);
-			console.log("Updated functions");
 		});
 	});
 </script>
