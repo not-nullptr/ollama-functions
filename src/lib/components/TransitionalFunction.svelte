@@ -7,24 +7,28 @@
 	let loadContainer: HTMLDivElement;
 	let loadContainerInternal: HTMLDivElement;
 
-	export let iconUrl =
-		"https://s2.googleusercontent.com/s2/favicons?sz=48&domain_url=https://ollama.com";
+	export let iconUrl = `/favicon?domain=${encodeURIComponent("undefined")}&sz=64`;
 
 	const defaultColor = "#3b82f6";
 	const duration = 360;
 	const ease = "ease-in-out";
 
 	const onLoad = async () => {
-		if (img.naturalHeight) return;
-		return new Promise<void>((resolve) => {
+		if (img.naturalHeight || !img.src) return;
+		return new Promise<void>((resolve, reject) => {
 			img.onload = () => {
 				resolve();
+			};
+			img.onerror = (e) => {
+				reject(e);
 			};
 		});
 	};
 
 	export const triggerFunction = async () => {
+		console.log("!");
 		await onLoad();
+		console.log("!!");
 		const fac = new FastAverageColor();
 		const color = await fac.getColorAsync(img);
 		// if all the values are greater than 220, it's close to white
@@ -254,7 +258,7 @@
 			<img
 				crossorigin="anonymous"
 				bind:this={img}
-				src="/cors?url={encodeURIComponent(iconUrl)}"
+				src={iconUrl}
 				alt="hero"
 				class="w-5 h-5 rounded-full"
 			/>
