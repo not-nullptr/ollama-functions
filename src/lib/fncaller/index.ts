@@ -85,22 +85,27 @@ export class FunctionCaller<T extends FunctionSchema> {
 							},
 							null,
 							4,
-						)}\n\nOutput ONLY in JSON, with no explanations, such that a parser could parse the raw output. If a function doesn't match the query, return exact string "null". Else, pick a function, and return it in the format { function: "functionName", params: { key: value } }.`,
+						)}\n\n${settings.enforceJsonOutput ? "OUTPUT IN ONLY PARSABLE JSON, without any explanations. Ensure a parser would be able to parse the output" : ""}If a function doesn't match the query, return exact string { function: null }. Else, pick a function, and return it in the format { function: "functionName", params: { key: value } }. Only pick a function if the user asks.`,
 					},
 					{
 						role: "user",
 						content: `History: \n${history
-							.slice(Math.max(history.length - 4, 1))
+							.slice(Math.max(history.length - 4, 0))
 							.slice(0, -1)
 							.map((h) => `${h.role}: ${h.content}`)
 							.join("\n")}\n\nQuery: ${query}`,
 					},
 				],
 				stream: false,
+				...(settings.enforceJsonOutput
+					? {
+							format: "json",
+						}
+					: {}),
 			}),
 		});
 		const response = (await res.json()) as ChatResponse;
-
+		console.log(response.message.content);
 		try {
 			const message = JSON.parse(
 				response.message.content.startsWith("null") ||

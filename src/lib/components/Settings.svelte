@@ -26,22 +26,23 @@
 	const changeSetting = (key: string, target: EventTarget | null) => {
 		if (!target || !(target instanceof HTMLInputElement)) return;
 		const schemaItem = settingsSchema[key as keyof typeof settingsSchema];
-		const validator = schemaItem.validate;
+		const validator = "validate" in schemaItem ? schemaItem.validate : null;
 		if (validator && !validator(target.value as never)) {
 			return;
 		}
 		if ((schemaItem.type as any) === "number") {
 			($settingsStore as any)[key] = Number(target.value);
-			return;
-		}
-		($settingsStore as any)[key as keyof typeof settingsSchema] = target.value;
+		} else if ((schemaItem.type as any) === "boolean") {
+			($settingsStore as any)[key] = target.checked;
+		} else ($settingsStore as any)[key as keyof typeof settingsSchema] = target.value;
+		$settingsStore = { ...$settingsStore };
 	};
 
 	const getSetting = (key: string) => {
-		return (
-			$settingsStore[key as keyof typeof settingsSchema] ||
-			(settingsSchema as any)[key].default
-		);
+		const val = $settingsStore[key as keyof typeof settingsSchema];
+		return val === undefined || val === null || typeof val === "undefined"
+			? (settingsSchema as any)[key].default
+			: val;
 	};
 
 	const clearSettings = () => {
@@ -131,21 +132,28 @@
 	<div
 		id="settings-form"
 		bind:this={settingsPanel}
-		class="w-screen h-64 fixed bottom-0 translate-y-full pt-12"
+		class="w-screen h-64 fixed bottom-0 translate-y-full pt-12 overflow-hidden flex flex-col"
 	>
-		{#each Object.entries(settingsSchema) as [key, value]}
-			<div class="flex gap-4 justify-between items-center p-4 border-b border-gray-200">
-				<span class="flex-shrink-0">{value.label}</span>
-				<input
-					data-key={key}
-					type="text"
-					class=" p-1 px-2 outline-none flex-grow"
-					on:input={(e) => changeSetting(key, e.target)}
-					value={getSetting(key)}
-				/>
-			</div>
-		{/each}
-		<div class="flex gap-4 p-4">
+		<div class="overflow-y-auto overflow-x-hidden flex-grow">
+			{#each Object.entries(settingsSchema) as [key, value]}
+				<div class="flex gap-4 items-center p-4 border-b border-gray-200">
+					<span class="flex-shrink-0">{value.label}</span>
+					<input
+						data-key={key}
+						type={value.type === "boolean" ? "checkbox" : "text"}
+						class=" p-1 px-2 outline-none {value.type === 'boolean' ? '' : 'flex-grow'}"
+						on:input={(e) => changeSetting(key, e.target)}
+						on:change={(e) => {
+							changeSetting(key, e.target);
+							console.log(key);
+						}}
+						value={getSetting(key)}
+						checked={getSetting(key)}
+					/>
+				</div>
+			{/each}
+		</div>
+		<div class="flex gap-4 p-4 flex-shrink-0">
 			<a
 				href="/edit"
 				class="border-2 border-gray-300 rounded-lg py-2 px-4 hover:bg-gray-300 active:bg-gray-400 active:border-gray-400 transition-all ease-out duration-200"

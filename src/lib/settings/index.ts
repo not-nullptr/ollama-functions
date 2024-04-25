@@ -16,6 +16,11 @@ export const settingsSchema = {
 			}
 		},
 	},
+	enforceJsonOutput: {
+		label: "Enforce JSON Output (slower but far more reliable)",
+		type: "boolean",
+		default: true,
+	},
 } as const;
 
 type ReadOnlyStore = Partial<{
