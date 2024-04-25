@@ -1,6 +1,6 @@
 import { browser } from "$app/environment";
 import type { StringToType } from "$lib/fncaller";
-import { writable } from "svelte/store";
+import { get, writable } from "svelte/store";
 
 export const settingsSchema = {
 	ollamaUrl: {
@@ -26,10 +26,14 @@ type Mutable = {
 	-readonly [K in keyof ReadOnlyStore]: ReadOnlyStore[K];
 };
 
+const defaults = Object.fromEntries(
+	Object.entries(settingsSchema).map(([key, value]) => [key, value.default]),
+);
+
 export const settingsStore = writable<Mutable>(
-	(browser ? JSON.parse(localStorage.getItem("settings") || "{}") : {}) ||
-		// map the settingsSchema such that it becomes { name: default }
-		Object.fromEntries(
-			Object.entries(settingsSchema).map(([key, value]) => [key, value.default]),
-		),
+	browser
+		? JSON.parse(localStorage.getItem("settings") || JSON.stringify(defaults))
+		: defaults ||
+				// map the settingsSchema such that it becomes { name: default }
+				defaults,
 );
