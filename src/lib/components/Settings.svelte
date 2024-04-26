@@ -1,13 +1,17 @@
 <script lang="ts">
+	import { afterNavigate } from "$app/navigation";
 	import { settingsSchema, settingsStore } from "$lib/settings";
+	import { onMount, tick } from "svelte";
 
 	let settingsIcon: HTMLButtonElement;
 	let settingsPanel: HTMLDivElement;
-	let panelHeight = 0;
+	let draggable: HTMLDivElement;
+	let mainContent: HTMLDivElement;
+	let panelHeight = 256;
 	let open = false;
+	let dragging = false;
 
-	const openSettings = (e: MouseEvent) => {
-		e.preventDefault();
+	const toggleSettings = () => {
 		const animation = settingsIcon.getAnimations().find((a) => a.id === "rotate-settings-icon");
 		if (animation) return;
 		settingsIcon.animate(
@@ -107,65 +111,236 @@
 			duration: 500,
 		};
 	};
+
+	onMount(() => {
+		let initialX = 0;
+		let initialY = 0;
+		let lastX = 0;
+		let lastY = 0;
+		let initialContentY = 0;
+		let initialBounds = draggable.getBoundingClientRect();
+
+		function linearDecrease(num1: number, num2: number, distance: number) {
+			if (num1 === num2) {
+				return 1;
+			} else {
+				// Calculate the slope of the linear decrease
+				const slope = 1 / distance;
+				// Calculate the distance between num1 and num2
+				const diff = Math.abs(num1 - num2);
+				// Calculate the value based on linear interpolation
+				const value = 1 - slope * diff;
+				// Ensure the value doesn't go below 0
+				return value >= 0 ? value : 0;
+			}
+		}
+
+		function mouseDown(e: MouseEvent) {
+			document.body.style.setProperty("-webkit-user-drag", "none");
+			document.body.style.setProperty("user-select", "none");
+			if (dragging) return;
+			if ((e.target as any).id === "draggable") {
+				dragging = true;
+				lastX = e.clientX;
+				lastY = e.clientY;
+				const style = window.getComputedStyle(draggable);
+				const matrix = new WebKitCSSMatrix(style.transform);
+				initialX = matrix.m41;
+				initialY = matrix.m42;
+				const contentStyle = window.getComputedStyle(mainContent);
+				const contentMatrix = new WebKitCSSMatrix(contentStyle.transform);
+				initialContentY = contentMatrix.m42;
+				initialBounds = draggable.getBoundingClientRect();
+				window.addEventListener("mousemove", mouseMove);
+				window.addEventListener("mouseup", mouseUp);
+				draggable.style.pointerEvents = "none";
+			}
+		}
+		function remapValue(value: number, minValue: number, maxValue: number): number {
+			// Normalize the value to a range between 0 and 1
+			const normalizedValue = (value - minValue) / (maxValue - minValue);
+
+			// Remap the normalized value to the new range
+			const remappedValue = normalizedValue * (1 - 0) + 0;
+
+			return remappedValue;
+		}
+
+		function mouseMove(e: MouseEvent) {
+			const maxPxs = 800;
+			const deltaY = e.clientY - lastY;
+			const clamped = Math.min(Math.max(deltaY, -(maxPxs / 2)), maxPxs / 2);
+
+			const yMin = lastY - maxPxs / 2;
+			const yMax = lastY + maxPxs / 2;
+
+			let scaleFactor = linearDecrease(
+				lastY,
+				Math.min(Math.max(e.clientY, yMin), yMax),
+				maxPxs,
+			);
+
+			let animationController = remapValue(scaleFactor, 1, 0.5);
+			if (open) animationController = 0 - animationController;
+
+			const maxBlur = 4;
+			const maxTY = 100;
+			const maxRotate = 400;
+
+			mainContent.style.transition = "none";
+			settingsIcon.style.transition = "none";
+
+			if (open) {
+				mainContent.style.transform = `translateY(${initialContentY - maxTY * animationController}px)`;
+				mainContent.style.filter = `blur(${
+					remapValue(Math.max(maxBlur * -animationController, 0), 4, 0) + 2.36
+				}px)`;
+				settingsIcon.style.transform = `rotateZ(${maxRotate * animationController}deg)`;
+			} else {
+				mainContent.style.transform = `translateY(${-(maxTY * animationController)}px)`;
+				mainContent.style.filter = `blur(${Math.max(maxBlur * animationController, 0).toFixed(2)}px)`;
+				settingsIcon.style.transform = `rotateZ(${maxRotate * animationController}deg)`;
+			}
+
+			mainContent.offsetHeight;
+			settingsIcon.offsetHeight;
+			mainContent.style.transition = "";
+			settingsIcon.style.transition = "";
+			const translatedY = initialY + clamped * Math.abs(scaleFactor);
+
+			draggable.style.transform = `translate(0px, ${translatedY}px)`;
+		}
+
+		async function mouseUp() {
+			document.body.style.setProperty("-webkit-user-drag", "");
+			document.body.style.setProperty("user-select", "");
+			await tick();
+			window.removeEventListener("mousemove", mouseMove);
+			window.removeEventListener("mouseup", mouseUp);
+			settingsIcon.style.transition = "";
+			settingsIcon.offsetHeight;
+			settingsIcon.style.transform = `rotateZ(${open ? "-36" : "36"}0deg)`;
+
+			draggable.animate(
+				[
+					{
+						transform: "translateY(0)",
+					},
+				],
+				{
+					easing: "ease",
+					duration: 500,
+				},
+			).onfinish = () => {
+				dragging = false;
+				draggable.style.transform = "";
+				draggable.style.filter = "";
+				draggable.getAnimations().forEach((a) => a.cancel());
+				mainContent.getAnimations().forEach((a) => a.cancel());
+			};
+			open = !open;
+			draggable.style.pointerEvents = "auto";
+		}
+
+		draggable.addEventListener("mousedown", mouseDown);
+	});
 </script>
 
 <div
 	in:dumbTransitionIn={{}}
 	out:dumbTransitionOut={{}}
-	style="transition: all 0.5s ease; transform: translateY(-{open ? panelHeight : 0}px)"
+	style="transition: 0.5s ease; transition-property: transform; -webkit-user-drag: none; transform: translateY(-{open
+		? panelHeight
+		: 0}px)"
 >
-	<div id="mainContent" class="w-screen flex items-center justify-center">
+	<!-- svelte-ignore a11y-click-events-have-key-events -->
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<div
+		bind:this={mainContent}
+		style="transform: translateY({open ? 160 : 0}px); filter: blur({open ? 4 : 0}px)"
+		id="mainContent"
+		class="w-screen flex items-center justify-center after:content-[''] relative after:absolute after:w-full after:h-full {open
+			? 'after:pointer-events-auto bg-black bg-opacity-20'
+			: 'after:pointer-events-none'}"
+	>
 		<slot />
 	</div>
-	<button
-		bind:this={settingsIcon}
-		style="transition: all 0.5s ease; margin-bottom: {open ? -42 : 16}px"
-		class="fixed w-7 h-7 bottom-0 left-0 ml-6 transform z-10"
-		on:click={openSettings}
-	>
-		<iconify-icon
-			style="font-size: 28px;"
-			class="cursor-pointer"
-			icon="material-symbols:settings-outline-rounded"
-		/>
-	</button>
 	<div
-		id="settings-form"
-		bind:this={settingsPanel}
-		class="w-screen h-64 fixed bottom-0 translate-y-full pt-12 overflow-hidden flex flex-col"
+		bind:this={draggable}
+		id="draggable"
+		style="box-shadow: {open
+			? '0px -4px 20px rgba(0,0,0,0.25)'
+			: '0px -0px 8px rgba(0,0,0,0.1)'}; transition: box-shadow 0.5s ease;"
+		class="fixed bottom-0 left-0 w-full h-[56px] p-6 bg-white border-t-2 border-t-gray-200 z-50"
 	>
-		<div class="overflow-y-auto overflow-x-hidden flex-grow">
-			{#each Object.entries(settingsSchema) as [key, value]}
-				<div class="flex gap-4 items-center p-4 border-b border-gray-200">
-					<span class="flex-shrink-0">{value.label}</span>
-					<input
-						data-key={key}
-						type={value.type === "boolean" ? "checkbox" : "text"}
-						class=" p-1 px-2 outline-none {value.type === 'boolean' ? '' : 'flex-grow'}"
-						on:input={(e) => changeSetting(key, e.target)}
-						on:change={(e) => {
-							changeSetting(key, e.target);
-							console.log(key);
-						}}
-						value={getSetting(key)}
-						checked={getSetting(key)}
-					/>
-				</div>
-			{/each}
-		</div>
-		<div class="flex gap-4 p-4 flex-shrink-0">
-			<a
-				href="/edit"
-				class="text-black no-underline hover:text-black active:text-black hover:no-underline border-2 border-gray-300 rounded-lg py-2 px-4 hover:bg-gray-300 active:bg-gray-400 active:border-gray-400 transition-all ease-out duration-200"
-			>
-				Edit Tasks
-			</a>
-			<button
-				on:click={clearSettings}
-				class="border-2 border-gray-300 rounded-lg py-2 px-4 hover:bg-gray-300 active:bg-gray-400 active:border-gray-400 transition-all ease-out duration-200"
-			>
-				Clear Settings
-			</button>
+		<div
+			id="draggable"
+			class="w-1/4 h-2 border-2 border-gray-200 bg-white border-b-white rounded-t-lg left-0 right-0 m-auto bottom-full absolute bg-gradient-to-t from-white to-gray-100"
+		/>
+		<button
+			bind:this={settingsIcon}
+			class="fixed w-7 h-7 bottom-0 left-0 ml-4 transform z-10 mb-[14px] settingsIcon"
+			on:click={toggleSettings}
+		>
+			<iconify-icon
+				style="font-size: 28px;"
+				class="cursor-pointer"
+				icon="material-symbols:settings-outline-rounded"
+			/>
+		</button>
+		<div
+			id="settings-form"
+			bind:this={settingsPanel}
+			style="-webkit-user-drag: none; user-select: none;"
+			class="w-screen h-64 fixed bottom-0 translate-y-full overflow-hidden flex flex-col bg-white left-0"
+		>
+			<div class="overflow-y-auto overflow-x-hidden flex-grow">
+				{#each Object.entries(settingsSchema) as [key, value]}
+					<div class="flex gap-4 items-center p-4 border-b border-gray-200">
+						<span class="flex-shrink-0">{value.label}</span>
+						<input
+							data-key={key}
+							type={value.type === "boolean" ? "checkbox" : "text"}
+							class=" p-1 px-2 outline-none {value.type === 'boolean'
+								? ''
+								: 'flex-grow'}"
+							on:input={(e) => changeSetting(key, e.target)}
+							on:change={(e) => {
+								changeSetting(key, e.target);
+								console.log(key);
+							}}
+							value={getSetting(key)}
+							checked={getSetting(key)}
+							disabled={dragging}
+						/>
+					</div>
+				{/each}
+			</div>
+			<div class="flex gap-4 p-4 flex-shrink-0">
+				<a
+					href="/edit"
+					class="text-black no-underline hover:text-black active:text-black hover:no-underline border-2 border-gray-300 rounded-lg py-2 px-4 hover:bg-gray-300 active:bg-gray-400 active:border-gray-400 transition-all ease-out duration-200"
+				>
+					Edit Tasks
+				</a>
+				<button
+					on:click={clearSettings}
+					class="border-2 border-gray-300 rounded-lg py-2 px-4 hover:bg-gray-300 active:bg-gray-400 active:border-gray-400 transition-all ease-out duration-200"
+				>
+					Clear Settings
+				</button>
+			</div>
 		</div>
 	</div>
 </div>
+
+<style>
+	#mainContent {
+		transition: 0.5s ease;
+		transition-property: filter, transform, background;
+	}
+
+	.settingsIcon {
+		transition: all 0.5s ease;
+	}
+</style>

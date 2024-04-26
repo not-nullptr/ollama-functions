@@ -258,7 +258,8 @@
 <Settings>
 	<div
 		bind:this={container}
-		class="max-w-[1200px] pb-16 p-4 overflow-y-auto py-8 ml-auto mr-auto w-screen h-screen text-xl"
+		style="scrollbar-width: none;"
+		class="max-w-[1200px] pb-24 p-4 overflow-y-auto py-8 ml-auto mr-auto w-screen h-screen text-xl"
 	>
 		{#each chatHistory.filter((c) => c.role !== "system") as message, i}
 			<div>
