@@ -54,6 +54,7 @@
 		"pako": "^2.1.0",
 		"rettiwt-api": "^2.7.1",
 		"sanitize-html": "^2.13.0",
+		"svelte-markdown": "^0.4.1",
 		"uuid": "^9.0.1",
 		"wikijs": "^6.4.1",
 		"ws": "^8.16.0"

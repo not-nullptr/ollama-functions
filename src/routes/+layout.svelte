@@ -29,3 +29,16 @@
 </script>
 
 <slot />
+
+<style>
+	:global(a) {
+		color: #2085ff;
+	}
+	:global(a:hover) {
+		color: #2085ff;
+		text-decoration: underline;
+	}
+	:global(a:active) {
+		color: #0a5b9d;
+	}
+</style>

@@ -156,7 +156,7 @@
 		<div class="flex gap-4 p-4 flex-shrink-0">
 			<a
 				href="/edit"
-				class="border-2 border-gray-300 rounded-lg py-2 px-4 hover:bg-gray-300 active:bg-gray-400 active:border-gray-400 transition-all ease-out duration-200"
+				class="text-black no-underline hover:text-black active:text-black hover:no-underline border-2 border-gray-300 rounded-lg py-2 px-4 hover:bg-gray-300 active:bg-gray-400 active:border-gray-400 transition-all ease-out duration-200"
 			>
 				Edit Tasks
 			</a>

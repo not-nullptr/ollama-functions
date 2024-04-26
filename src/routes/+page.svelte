@@ -9,6 +9,8 @@
 	import CuteBall from "$lib/components/CuteBall.svelte";
 	import Settings from "$lib/components/Settings.svelte";
 	import { settingsStore } from "$lib/settings";
+	import SvelteMarkdown from "svelte-markdown";
+	import MdLink from "$lib/components/MdLink.svelte";
 
 	let input: HTMLTextAreaElement;
 	let container: HTMLDivElement;
@@ -270,7 +272,14 @@
 							bind:triggerFunction
 							bind:iconUrl
 						/>
-					{/if}{message.content}{#if message.role === "assistant" && i === chatHistory.length - 2 && yapping && message.content}
+					{/if}<span>
+						<SvelteMarkdown
+							renderers={{
+								link: MdLink,
+							}}
+							source={message.content}
+						/>
+					</span>{#if message.role === "assistant" && i === chatHistory.length - 2 && yapping && message.content}
 						<CuteBall bind:addText />
 					{/if}
 				</div>
