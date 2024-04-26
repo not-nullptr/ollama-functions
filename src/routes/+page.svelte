@@ -32,18 +32,11 @@
 	let iconUrl: string;
 	let error = false;
 
-	let chatHistory: (Message & {
-		sources?: {
-			title: string;
-			url: string;
-		}[];
-		title?: string;
-	})[] = $messagesStore;
 	$: {
-		chatHistory;
-		$messagesStore = chatHistory;
+		$messagesStore;
+		$messagesStore = $messagesStore;
 	}
-	let newMsgOpts: Partial<(typeof chatHistory)[0]> = {};
+	let newMsgOpts: Partial<(typeof $messagesStore)[0]> = {};
 
 	// let on = true;
 	// $: {
@@ -140,8 +133,8 @@
 	};
 
 	const sendMessage = async () => {
-		chatHistory = [
-			...chatHistory,
+		$messagesStore = [
+			...$messagesStore,
 			{ role: "user", content: input.value },
 			{ ...newMsgOpts, role: "assistant", content: "" },
 		];
@@ -152,17 +145,20 @@
 		yapping = true;
 		let query = input.value;
 		let sysPrompt = "";
-		if (chatHistory.filter((c) => c.role === "system").length === 0) {
-			chatHistory = [
+		const date = new Date();
+		const day = date.toLocaleString("en-GB", { weekday: "long" });
+		const time = date.toLocaleString("en-GB", { hour: "numeric", minute: "numeric" });
+		if ($messagesStore.filter((c) => c.role === "system").length === 0) {
+			$messagesStore = [
 				{
 					role: "system",
 					content: "",
 				},
-				...chatHistory,
+				...$messagesStore,
 			];
-			sysPrompt += `You are LLaMA, a helpful, witty, fun-to-chat-with but not over-the-top AI assistant. Current date is ${new Date().toLocaleDateString()}, current time is ${new Date().toLocaleTimeString()}. `;
+			sysPrompt += `You are LLaMA, a helpful, witty, fun-to-chat-with but not over-the-top AI assistant. Current date is ${day} ${date.toLocaleDateString()}, current time is ${time}. `;
 		}
-		const fn = await fnCaller.getFunction(query, chatHistory);
+		const fn = await fnCaller.getFunction(query, $messagesStore);
 		// sometimes it outputs like { "name": {"param1": "value"} }
 		const potentialFn = Object.keys(fn)[0];
 		if (
@@ -191,11 +187,12 @@
 
 			sysPrompt += `Use the following between <context> XML tags to help answer the user's question. Do not reference the context, do not mention "context" to the user, do not output the full context XML, only use the facts inside of it.\n<context>\n  ${fnRes}\n</context>`;
 		}
-		chatHistory[chatHistory.length - 1] = {
-			...chatHistory[chatHistory.length - 1],
+		$messagesStore[$messagesStore.length - 1] = {
+			...$messagesStore[$messagesStore.length - 1],
 			...newMsgOpts,
 		};
-		chatHistory[0].content = sysPrompt;
+		$messagesStore[0].content = sysPrompt;
+		$messagesStore = [...$messagesStore];
 		const chatReq = await fetch(`${$settingsStore.ollamaUrl}/api/chat`, {
 			method: "POST",
 			headers: {
@@ -203,7 +200,7 @@
 			},
 			body: JSON.stringify({
 				model: $settingsStore.model,
-				messages: [...chatHistory.slice(0, -1)],
+				messages: [...$messagesStore.slice(0, -1)],
 				stream: true,
 			}),
 		});
@@ -216,7 +213,7 @@
 		const handleMessage = async (message: ChatResponse) => {
 			await addText(
 				() => {
-					chatHistory[chatHistory.length - 1].content += message.message.content;
+					$messagesStore[$messagesStore.length - 1].content += message.message.content;
 				},
 				() => inferenceContainer.getBoundingClientRect(),
 			);
@@ -249,6 +246,7 @@
 	onMount(() => {
 		fixInputSize();
 		fixContainerScroll();
+		document.body.style.userSelect = "";
 		toolsStore.subscribe((val) => {
 			fnCaller.setFunctions(val.schema, val.fns);
 		});
@@ -261,7 +259,7 @@
 		style="scrollbar-width: none;"
 		class="max-w-[1200px] pb-24 p-4 overflow-y-auto py-8 ml-auto mr-auto w-screen h-screen text-xl"
 	>
-		{#each chatHistory.filter((c) => c.role !== "system") as message, i}
+		{#each $messagesStore.filter((c) => c.role !== "system") as message, i}
 			<div>
 				<b>{message.role}</b>
 				<div class="whitespace-pre-wrap" bind:this={inferenceContainer}>
@@ -274,12 +272,13 @@
 						/>
 					{/if}<span>
 						<SvelteMarkdown
+							isInline={true}
 							renderers={{
 								link: MdLink,
 							}}
 							source={message.content}
 						/>
-					</span>{#if message.role === "assistant" && i === chatHistory.length - 2 && yapping && message.content}
+					</span>{#if message.role === "assistant" && i === $messagesStore.length - 2 && yapping && message.content}
 						<CuteBall bind:addText />
 					{/if}
 				</div>

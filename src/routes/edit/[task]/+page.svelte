@@ -5,6 +5,7 @@
 	import { toolsStore } from "$lib/fncaller";
 	import { mocha } from "$lib/monaco/theme";
 	import { goto } from "$app/navigation";
+	import { settingsSchema, settingsStore } from "$lib/settings";
 
 	let editor: Monaco.editor.IStandaloneCodeEditor;
 	let monaco: typeof Monaco;
@@ -32,6 +33,14 @@
 		monaco.languages.typescript.typescriptDefaults.addExtraLib(
 			`
             const _ = ${JSON.stringify(schema)} as const;
+			const settingsSchema = ${JSON.stringify(settingsSchema)};
+			type ReadOnlyStore = Partial<{
+	            [K in keyof typeof settingsSchema]: StringToType<(typeof settingsSchema)[K]["type"]>;
+            }>;
+
+            type Mutable = {
+            	-readonly [K in keyof ReadOnlyStore]: ReadOnlyStore[K];
+            };
             type StringToType<T extends string> = T extends "string" ? string : T extends "number" ? number : T extends "boolean" ? boolean : T extends "object" ? object : T extends "array" ? any[] : T extends "null" ? null : T extends "undefined" ? undefined : T extends "function" ? Function : T;
             type T = typeof _;
             type Tool = {
@@ -49,7 +58,7 @@
 							title: string;
 						}
 					>
-				) => void) => any;
+				) => void, settings: Mutable) => any;
             }["${schemaName}"];`,
 			"file:///toolType.d.ts",
 		);
@@ -171,9 +180,13 @@
 		);
 		if (Object.keys(params).length === 0) return;
 		console.log("running...");
-		const res = await fn(params, (v: any) => {
-			console.log("[DEBUG] Added optional data", v);
-		});
+		const res = await fn(
+			params,
+			(v: any) => {
+				console.log("[DEBUG] Added optional data", v);
+			},
+			$settingsStore,
+		);
 		console.log("result:", res);
 	};
 </script>

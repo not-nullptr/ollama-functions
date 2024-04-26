@@ -26,6 +26,11 @@ export const settingsSchema = {
 		type: "boolean",
 		default: true,
 	},
+	ballTransition: {
+		label: "Ball Transition Duration",
+		type: "number",
+		default: 150,
+	},
 } as const;
 
 type ReadOnlyStore = Partial<{

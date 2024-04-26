@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { afterNavigate } from "$app/navigation";
+	import { messagesStore } from "$lib/fncaller";
 	import { settingsSchema, settingsStore } from "$lib/settings";
 	import { onMount, tick } from "svelte";
 
@@ -7,6 +8,7 @@
 	let settingsPanel: HTMLDivElement;
 	let draggable: HTMLDivElement;
 	let mainContent: HTMLDivElement;
+	let nonSettingsBtns: HTMLDivElement;
 	let panelHeight = 256;
 	let open = false;
 	let dragging = false;
@@ -154,6 +156,9 @@
 				window.addEventListener("mousemove", mouseMove);
 				window.addEventListener("mouseup", mouseUp);
 				draggable.style.pointerEvents = "none";
+				draggable.getAnimations().forEach((a) => a.cancel());
+				mainContent.getAnimations().forEach((a) => a.cancel());
+				settingsIcon.getAnimations().forEach((a) => a.cancel());
 			}
 		}
 		function remapValue(value: number, minValue: number, maxValue: number): number {
@@ -186,9 +191,12 @@
 			const maxBlur = 4;
 			const maxTY = 100;
 			const maxRotate = 400;
+			const maxOpacity = 1;
+			const maxTX = 64;
 
 			mainContent.style.transition = "none";
 			settingsIcon.style.transition = "none";
+			nonSettingsBtns.style.transition = "none";
 
 			if (open) {
 				mainContent.style.transform = `translateY(${initialContentY - maxTY * animationController}px)`;
@@ -196,16 +204,24 @@
 					remapValue(Math.max(maxBlur * -animationController, 0), 4, 0) + 2.36
 				}px)`;
 				settingsIcon.style.transform = `rotateZ(${maxRotate * animationController}deg)`;
+				nonSettingsBtns.style.opacity = `${maxOpacity * -animationController - 0.25}`;
+				nonSettingsBtns.style.transform = `translateX(${-maxTX * animationController - maxTX}px)`;
 			} else {
 				mainContent.style.transform = `translateY(${-(maxTY * animationController)}px)`;
 				mainContent.style.filter = `blur(${Math.max(maxBlur * animationController, 0).toFixed(2)}px)`;
 				settingsIcon.style.transform = `rotateZ(${maxRotate * animationController}deg)`;
+				nonSettingsBtns.style.opacity = `${remapValue(maxOpacity * animationController, 0.5, 0)}`;
+				nonSettingsBtns.style.transform = `translateX(${-(maxTX * animationController)}px)`;
 			}
 
 			mainContent.offsetHeight;
 			settingsIcon.offsetHeight;
+			nonSettingsBtns.offsetHeight;
+
 			mainContent.style.transition = "";
 			settingsIcon.style.transition = "";
+			nonSettingsBtns.style.transition = "";
+
 			const translatedY = initialY + clamped * Math.abs(scaleFactor);
 
 			draggable.style.transform = `translate(0px, ${translatedY}px)`;
@@ -239,11 +255,22 @@
 				mainContent.getAnimations().forEach((a) => a.cancel());
 			};
 			open = !open;
+			if (open) {
+				nonSettingsBtns.style.pointerEvents = "none";
+			} else {
+				nonSettingsBtns.style.pointerEvents = "auto";
+			}
 			draggable.style.pointerEvents = "auto";
 		}
 
 		draggable.addEventListener("mousedown", mouseDown);
 	});
+
+	const eraseChat = () => {
+		console.log($messagesStore);
+		$messagesStore = [];
+		console.log($messagesStore);
+	};
 </script>
 
 <div
@@ -277,17 +304,29 @@
 			id="draggable"
 			class="w-1/4 h-2 border-2 border-gray-200 bg-white border-b-white rounded-t-lg left-0 right-0 m-auto bottom-full absolute bg-gradient-to-t from-white to-gray-100"
 		/>
-		<button
-			bind:this={settingsIcon}
-			class="fixed w-7 h-7 bottom-0 left-0 ml-4 transform z-10 mb-[14px] settingsIcon"
-			on:click={toggleSettings}
-		>
-			<iconify-icon
-				style="font-size: 28px;"
-				class="cursor-pointer"
-				icon="material-symbols:settings-outline-rounded"
-			/>
-		</button>
+		<div class="-ml-2 z-10 mt-[-11px] flex w-fit gap-4">
+			<button
+				bind:this={settingsIcon}
+				class="w-7 h-7 transform settingsIcon"
+				on:click={toggleSettings}
+			>
+				<iconify-icon
+					style="font-size: 28px;"
+					class="cursor-pointer"
+					icon="material-symbols:settings-outline-rounded"
+				/>
+			</button>
+			<div
+				style="opacity: {open ? 0 : 1}; transform: translateX({open ? -48 : 0}px)"
+				class="flex gap-4 non-settings"
+				bind:this={nonSettingsBtns}
+			>
+				<button class="w-7 h-7 transform" on:click={eraseChat}>
+					<iconify-icon style="font-size: 28px;" icon="icon-park-outline:clear-format"
+					></iconify-icon>
+				</button>
+			</div>
+		</div>
 		<div
 			id="settings-form"
 			bind:this={settingsPanel}
@@ -342,5 +381,10 @@
 
 	.settingsIcon {
 		transition: all 0.5s ease;
+	}
+
+	.non-settings {
+		transition: 0.4s ease;
+		transition-property: opacity, transform;
 	}
 </style>

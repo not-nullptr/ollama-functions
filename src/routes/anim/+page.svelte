@@ -24,9 +24,12 @@
 		const interval = setInterval(() => {
 			const token = tokens.shift();
 			if (token) {
-				addText(() => {
-					text += token;
-				}, container.getBoundingClientRect);
+				addText(
+					() => {
+						text += token;
+					},
+					() => container.getBoundingClientRect(),
+				);
 			} else {
 				clearInterval(interval);
 			}

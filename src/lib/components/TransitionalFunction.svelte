@@ -83,7 +83,7 @@
 					delay: 250,
 				},
 			).onfinish = () => {
-				imgContainer.animate(
+				imgContainer?.animate(
 					[
 						{
 							transform: "rotate(0deg)",
@@ -206,6 +206,7 @@
 				fill: "forwards",
 			},
 		).onfinish = () => {
+			if (!loadContainer) return;
 			loadContainer.style.transformOrigin = "right";
 		};
 	};

@@ -60,6 +60,9 @@ export class FunctionCaller<T extends FunctionSchema> {
 	}
 	async getFunction(query: string, history: Message[]) {
 		const settings = get(settingsStore);
+		const date = new Date();
+		const day = date.toLocaleString("en-GB", { weekday: "long" });
+		const time = date.toLocaleString("en-GB", { hour: "numeric", minute: "numeric" });
 		const res = await fetch(`${settings.ollamaUrl}/api/chat`, {
 			method: "POST",
 			body: JSON.stringify({
@@ -86,7 +89,9 @@ export class FunctionCaller<T extends FunctionSchema> {
 							.slice(Math.max(history.length - 4, 0))
 							.slice(0, -1)
 							.map((h) => `${h.role}: ${h.content}`)
-							.join("\n")}\n\nQuery: ${query}`,
+							.join(
+								"\n",
+							)}\n\nQuery: ${query}\n\nCurrent date (DD/MM/YYYY): ${day} ${date.toLocaleDateString()}`,
 					},
 				],
 				stream: false,
@@ -160,7 +165,7 @@ export class FunctionCaller<T extends FunctionSchema> {
 			},
 		);
 
-		return eval(transpiled)?.(fnParams as any, addOpt);
+		return eval(transpiled)?.(fnParams as any, addOpt, get(settingsStore));
 	}
 
 	getIcon(fn: keyof T) {
@@ -198,4 +203,12 @@ export const toolsStore = writable<{
 	fns: {},
 });
 
-export const messagesStore = writable<Message[]>([]);
+export const messagesStore = writable<
+	(Message & {
+		sources?: {
+			title: string;
+			url: string;
+		}[];
+		title?: string;
+	})[]
+>([]);
