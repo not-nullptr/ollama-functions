@@ -52,13 +52,11 @@ export class FunctionCaller<T extends FunctionSchema> {
 		},
 	) {
 		if (!browser) return;
-		localStorage.setItem("aiTasks", JSON.stringify(schema));
 		// convert everything in fnMap to strings
 		const fnMapString = {} as any;
 		for (const key in fnMap) {
 			fnMapString[key] = fnMap[key].toString();
 		}
-		localStorage.setItem("aiFunctions", JSON.stringify(fnMapString));
 	}
 	async getFunction(query: string, history: Message[]) {
 		const settings = get(settingsStore);
@@ -69,22 +67,18 @@ export class FunctionCaller<T extends FunctionSchema> {
 				messages: [
 					{
 						role: "system",
-						content: `Functions: ${
-							(JSON.stringify(this.schema), null, 4)
-						}\nSchema: ${JSON.stringify(
-							{
-								function: {
-									type: Object.keys(this.schema).join(" | "),
-									required: false,
-								},
-								params: {
-									type: "Map<string, any>",
-									required: false,
-								},
+						content: `Functions: ${JSON.stringify(
+							this.schema,
+						)}\nSchema: ${JSON.stringify({
+							function: {
+								type: Object.keys(this.schema).join(" | "),
+								required: false,
 							},
-							null,
-							4,
-						)}\n\n${settings.enforceJsonOutput ? "OUTPUT IN ONLY PARSABLE JSON, without any explanations. Ensure a parser would be able to parse the output" : ""}If a function doesn't match the query, return exact string { function: null }. Else, pick a function, and return it in the format { function: "functionName", params: { key: value } }. Only pick a function if the user asks.`,
+							params: {
+								type: "Map<string, any>",
+								required: false,
+							},
+						})}\n\n${!settings.enforceJsonOutput ? "OUTPUT IN ONLY PARSABLE JSON, without any explanations. Ensure a parser would be able to parse the output. " : ""}If a function doesn't match the query, return exact string { function: null }. Else, pick a function, fill in the parameters from the function's schema, and return it in the format { function: "functionName", params: { key: value } }. Only pick a function if the user asks.`,
 					},
 					{
 						role: "user",
