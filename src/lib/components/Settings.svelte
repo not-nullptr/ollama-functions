@@ -350,7 +350,6 @@
 							}}
 							value={getSetting(key)}
 							checked={getSetting(key)}
-							disabled={dragging}
 						/>
 					</div>
 				{/each}
