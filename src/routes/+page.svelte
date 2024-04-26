@@ -291,7 +291,7 @@
 							title={source.title || source.url}
 							target="_blank"
 							href={source.url}
-							class="select-none mr-6 transition-all duration-200 ease-in-out hover:bg-gray-300 active:bg-gray-400 active:border-gray-400 cursor-pointer w-[200px] items-center inline-block rounded-lg border-2 border-gray-300 whitespace-nowrap overflow-hidden overflow-ellipsis text-sm mt-4 p-2 px-3 bg-gray-100"
+							class="text-black no-underline hover:text-black hover:no-underline active:text-black active:no-underline select-none mr-6 transition-all duration-200 ease-in-out hover:bg-gray-300 active:bg-gray-400 active:border-gray-400 cursor-pointer w-[200px] items-center inline-block rounded-lg border-2 border-gray-300 whitespace-nowrap overflow-hidden overflow-ellipsis text-sm mt-4 p-2 px-3 bg-gray-100"
 						>
 							<div class="flex gap-2">
 								<img
