@@ -129,13 +129,26 @@ export class FunctionCaller<T extends FunctionSchema> {
 		}
 	}
 
-	async callFunction({
-		function: fn,
-		params,
-	}: {
-		function: keyof T;
-		params: { [key: string]: string };
-	}) {
+	async callFunction(
+		{
+			function: fn,
+			params,
+		}: {
+			function: keyof T;
+			params: { [key: string]: string };
+		},
+		addOpt: (
+			v: Partial<
+				Message & {
+					sources?: {
+						title: string;
+						url: string;
+					}[];
+					title?: string;
+				}
+			>,
+		) => void,
+	) {
 		const schema = this.schema[fn];
 		if (!schema) return "";
 		console.log(`A function call was requested: ${String(fn)} (${schema.description})`);
@@ -154,7 +167,7 @@ export class FunctionCaller<T extends FunctionSchema> {
 			},
 		);
 
-		return eval(transpiled)?.(fnParams as any);
+		return eval(transpiled)?.(fnParams as any, addOpt);
 	}
 
 	getIcon(fn: keyof T) {

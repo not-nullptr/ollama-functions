@@ -32,7 +32,10 @@
 	let error = false;
 
 	let chatHistory: (Message & {
-		source?: string;
+		sources?: {
+			title: string;
+			url: string;
+		}[];
 		title?: string;
 	})[] = $messagesStore;
 	$: {
@@ -180,6 +183,9 @@
 					function: potentialFn,
 					params,
 				},
+				(val) => {
+					newMsgOpts = val;
+				},
 			);
 
 			sysPrompt += `Use the following between <context> XML tags to help answer the user's question. Do not reference the context, do not mention "context" to the user, do not output the full context XML, only use the facts inside of it.\n<context>\n  ${fnRes}\n</context>`;
@@ -269,22 +275,28 @@
 					{/if}
 				</div>
 			</div>
-			{#if message.source}
-				<a
-					title={message.title}
-					target="_blank"
-					href={message.source}
-					class="select-none transition-all duration-200 ease-in-out hover:bg-gray-300 active:bg-gray-400 active:border-gray-400 cursor-pointer w-[300px] items-center gap-2 flex rounded-lg border-2 border-gray-300 whitespace-nowrap overflow-hidden overflow-ellipsis text-sm mt-4 p-2 px-3 bg-gray-100"
-				>
-					<img
-						src="/favicon?domain={new URL(message.source).hostname}"
-						alt="Icon"
-						class="flex-shrink-0 h-full rounded-[4px]"
-					/>
-					<div class="whitespace-nowrap overflow-hidden overflow-ellipsis">
-						{message.title || message.source}
-					</div>
-				</a>
+			{#if message.sources && message.content}
+				<div>
+					{#each message.sources as source}
+						<a
+							title={source.title || source.url}
+							target="_blank"
+							href={source.url}
+							class="select-none mr-6 transition-all duration-200 ease-in-out hover:bg-gray-300 active:bg-gray-400 active:border-gray-400 cursor-pointer w-[200px] items-center inline-block rounded-lg border-2 border-gray-300 whitespace-nowrap overflow-hidden overflow-ellipsis text-sm mt-4 p-2 px-3 bg-gray-100"
+						>
+							<div class="flex gap-2">
+								<img
+									src="/favicon?domain={new URL(source.url).hostname}"
+									alt="Icon"
+									class="flex-shrink-0 h-full rounded-[4px]"
+								/>
+								<div class="whitespace-nowrap overflow-hidden overflow-ellipsis">
+									{source.title || source.url}
+								</div>
+							</div>
+						</a>
+					{/each}
+				</div>
 			{/if}
 			<br />
 		{/each}

@@ -37,7 +37,19 @@
             type Tool = {
 			    [K in keyof T]: (params: {
 				[P in keyof T[K]["params"]]: StringToType<T[K]["params"][P]["type"]>;
-			    }) => any;
+			    }, addOpt: (
+					v: Partial<
+						{
+							role: string;
+							content: string;
+							sources: {
+								title: string;
+								url: string;
+							}[];
+							title: string;
+						}
+					>
+				) => void) => any;
             }["${schemaName}"];`,
 			"file:///toolType.d.ts",
 		);
