@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { browser } from "$app/environment";
-	import { host, model, ai } from "$lib/ai";
 	import { FunctionCaller, messagesStore, toolsStore } from "$lib/fncaller";
 	import type { ChatResponse, Message } from "ollama/browser";
 	import { onMount, tick } from "svelte";
@@ -203,7 +202,7 @@
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({
-				model,
+				model: $settingsStore.model,
 				messages: [...chatHistory.slice(0, -1)],
 				stream: true,
 			}),

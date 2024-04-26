@@ -1,5 +1,4 @@
 import { browser } from "$app/environment";
-import { host, model } from "$lib/ai";
 import { settingsStore } from "$lib/settings";
 import type { ChatResponse, Message } from "ollama";
 import { get, writable } from "svelte/store";
@@ -66,7 +65,7 @@ export class FunctionCaller<T extends FunctionSchema> {
 		const res = await fetch(`${settings.ollamaUrl}/api/chat`, {
 			method: "POST",
 			body: JSON.stringify({
-				model,
+				model: settings.model,
 				messages: [
 					{
 						role: "system",

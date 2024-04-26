@@ -16,6 +16,11 @@ export const settingsSchema = {
 			}
 		},
 	},
+	model: {
+		label: "Model",
+		type: "string",
+		default: "llama3:8b",
+	},
 	enforceJsonOutput: {
 		label: "Enforce JSON Output (slower but far more reliable)",
 		type: "boolean",
