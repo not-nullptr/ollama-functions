@@ -224,7 +224,6 @@
 			const maxTX = 64;
 
 			const duration = remapValue(speed, 0, 100, 750, 50);
-			console.log(duration);
 			dynamicDuration = duration;
 			dynamicEasing = "cubic-bezier(0.19, 1, 0.22, 1)";
 
@@ -330,9 +329,7 @@
 	});
 
 	const eraseChat = () => {
-		console.log($messagesStore);
 		$messagesStore = [];
-		console.log($messagesStore);
 	};
 </script>
 
@@ -412,7 +409,6 @@
 							on:input={(e) => changeSetting(key, e.target)}
 							on:change={(e) => {
 								changeSetting(key, e.target);
-								console.log(key);
 							}}
 							value={getSetting(key)}
 							checked={getSetting(key)}

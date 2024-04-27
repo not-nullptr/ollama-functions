@@ -10,6 +10,15 @@
 	onMount(() => {
 		$toolsStore.fns = JSON.parse(localStorage.getItem("functions") || "{}");
 		$toolsStore.schema = JSON.parse(localStorage.getItem("schema") || "{}");
+		let i = 0;
+		for (const [name, tool] of Object.entries($toolsStore.fns)) {
+			i++;
+			if (!tool.createdAt) {
+				$toolsStore.fns[name].createdAt = Date.now() + i * 1000;
+			}
+		}
+		// $toolsStore = { ...$toolsStore };
+		localStorage.setItem("functions", JSON.stringify($toolsStore.fns));
 		const unsubscribeSettings = settingsStore.subscribe((v) => {
 			localStorage.setItem("settings", JSON.stringify(v));
 		});

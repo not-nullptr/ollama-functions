@@ -48,6 +48,8 @@ export class FunctionCaller<T extends FunctionSchema> {
 			[K in keyof T]: {
 				fn: string;
 				icon?: string;
+				enabled?: boolean;
+				createdAt: number;
 			};
 		},
 	) {
@@ -63,6 +65,12 @@ export class FunctionCaller<T extends FunctionSchema> {
 		const date = new Date();
 		const day = date.toLocaleString("en-GB", { weekday: "long" });
 		const time = date.toLocaleString("en-GB", { hour: "numeric", minute: "numeric" });
+		const enabledFns = Object.keys(this.fnMap).filter((fn) =>
+			typeof this.fnMap[fn].enabled === "undefined" ? true : this.fnMap[fn].enabled,
+		);
+		const enabledSchema = Object.fromEntries(
+			Object.entries(this.schema).filter(([key]) => enabledFns.includes(key)),
+		);
 		const res = await fetch(`${settings.ollamaUrl}/api/chat`, {
 			method: "POST",
 			body: JSON.stringify({
@@ -71,10 +79,10 @@ export class FunctionCaller<T extends FunctionSchema> {
 					{
 						role: "system",
 						content: `Functions: ${JSON.stringify(
-							this.schema,
+							enabledSchema,
 						)}\nSchema: ${JSON.stringify({
 							function: {
-								type: Object.keys(this.schema).join(" | "),
+								type: Object.keys(enabledSchema).join(" | "),
 								required: false,
 							},
 							params: {
@@ -182,6 +190,8 @@ export class FunctionCaller<T extends FunctionSchema> {
 			[K in keyof T]: {
 				fn: string;
 				icon?: string;
+				enabled?: boolean;
+				createdAt: number;
 			};
 		},
 	) {
@@ -196,6 +206,8 @@ export const toolsStore = writable<{
 		[key: string]: {
 			fn: string;
 			icon?: string;
+			enabled?: boolean;
+			createdAt: number;
 		};
 	};
 }>({
