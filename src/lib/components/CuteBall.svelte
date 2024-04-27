@@ -21,7 +21,7 @@
 			displayBall.style.setProperty("--bg", "transparent");
 			setTimeout(() => {
 				if (displayBall) displayBall.style.setProperty("--bg", "white");
-			}, 50);
+			}, 250);
 			displayBall.style.transition = "0.05s ease-in-out";
 		}
 		displayBall.style.left = `${hiddenBounds.left + offsetX}px`;

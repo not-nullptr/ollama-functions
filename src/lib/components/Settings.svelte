@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from "$app/environment";
 	import { afterNavigate } from "$app/navigation";
 	import { messagesStore } from "$lib/fncaller";
 	import { settingsSchema, settingsStore } from "$lib/settings";
@@ -13,6 +14,18 @@
 	let open = false;
 	let dragging = false;
 
+	$: {
+		if (browser && nonSettingsBtns)
+			if (dragging || open) {
+				nonSettingsBtns.style.pointerEvents = "none";
+			} else {
+				nonSettingsBtns.style.pointerEvents = "auto";
+			}
+	}
+
+	let dynamicDuration = 500;
+	let dynamicEasing = "ease";
+
 	const toggleSettings = () => {
 		const animation = settingsIcon.getAnimations().find((a) => a.id === "rotate-settings-icon");
 		if (animation) return;
@@ -20,7 +33,7 @@
 			[{ transform: "rotate(0deg)" }, { transform: `rotate(${open ? "-" : ""}360deg)` }],
 			{
 				duration: 550,
-				easing: "ease",
+				easing: dynamicEasing,
 				id: "rotate-settings-icon",
 			},
 		);
@@ -72,7 +85,7 @@
 		panelHeight = bounds.height;
 		settingsIcon.animate([{ transform: "rotate(0deg)" }, { transform: `rotate(-360deg)` }], {
 			duration: 500,
-			easing: "ease",
+			easing: dynamicEasing,
 			fill: "forwards",
 		});
 		node.animate(
@@ -82,7 +95,7 @@
 			],
 			{
 				duration: 500,
-				easing: "ease",
+				easing: dynamicEasing,
 			},
 		);
 		return {
@@ -99,14 +112,14 @@
 			};
 		settingsIcon.animate([{ transform: "rotate(0deg)" }, { transform: `rotate(360deg)` }], {
 			duration: 500,
-			easing: "ease",
+			easing: dynamicEasing,
 		});
 		node.style.position = "fixed";
 		const bounds = node.getBoundingClientRect();
 		mainContent.style.marginLeft = `${window.innerWidth / 2 - bounds.width / 2}px`;
 		node.animate([{ opacity: 1 }, { opacity: 0 }], {
 			duration: 500,
-			easing: "ease",
+			easing: dynamicEasing,
 			fill: "forwards",
 		});
 		return {
@@ -117,10 +130,15 @@
 	onMount(() => {
 		let initialX = 0;
 		let initialY = 0;
-		let lastX = 0;
-		let lastY = 0;
+		let initialMouseX = 0;
+		let initialMouseY = 0;
 		let initialContentY = 0;
 		let initialBounds = draggable.getBoundingClientRect();
+		let speed = 0;
+		let speeds: number[] = [];
+
+		let currentEvent: MouseEvent | null;
+		let lastEvent: MouseEvent | null;
 
 		function linearDecrease(num1: number, num2: number, distance: number) {
 			if (num1 === num2) {
@@ -143,8 +161,8 @@
 			if (dragging) return;
 			if ((e.target as any).id === "draggable") {
 				dragging = true;
-				lastX = e.clientX;
-				lastY = e.clientY;
+				initialMouseX = e.clientX;
+				initialMouseY = e.clientY;
 				const style = window.getComputedStyle(draggable);
 				const matrix = new WebKitCSSMatrix(style.transform);
 				initialX = matrix.m41;
@@ -155,13 +173,12 @@
 				initialBounds = draggable.getBoundingClientRect();
 				window.addEventListener("mousemove", mouseMove);
 				window.addEventListener("mouseup", mouseUp);
-				draggable.style.pointerEvents = "none";
 				draggable.getAnimations().forEach((a) => a.cancel());
 				mainContent.getAnimations().forEach((a) => a.cancel());
 				settingsIcon.getAnimations().forEach((a) => a.cancel());
 			}
 		}
-		function remapValue(value: number, minValue: number, maxValue: number): number {
+		function badRemapper(value: number, minValue: number, maxValue: number): number {
 			// Normalize the value to a range between 0 and 1
 			const normalizedValue = (value - minValue) / (maxValue - minValue);
 
@@ -171,21 +188,33 @@
 			return remappedValue;
 		}
 
+		function remapValue(
+			value: number,
+			oldMin: number,
+			oldMax: number,
+			newMin: number,
+			newMax: number,
+		) {
+			const normalizedValue = (value - oldMin) / (oldMax - oldMin);
+			const remappedValue = normalizedValue * (newMax - newMin) + newMin;
+			return remappedValue;
+		}
+
 		function mouseMove(e: MouseEvent) {
 			const maxPxs = 800;
-			const deltaY = e.clientY - lastY;
+			const deltaY = e.clientY - initialMouseY;
 			const clamped = Math.min(Math.max(deltaY, -(maxPxs / 2)), maxPxs / 2);
 
-			const yMin = lastY - maxPxs / 2;
-			const yMax = lastY + maxPxs / 2;
+			const yMin = initialMouseY - maxPxs / 2;
+			const yMax = initialMouseY + maxPxs / 2;
 
 			let scaleFactor = linearDecrease(
-				lastY,
+				initialMouseY,
 				Math.min(Math.max(e.clientY, yMin), yMax),
 				maxPxs,
 			);
 
-			let animationController = remapValue(scaleFactor, 1, 0.5);
+			let animationController = badRemapper(scaleFactor, 1, 0.5);
 			if (open) animationController = 0 - animationController;
 
 			const maxBlur = 4;
@@ -194,6 +223,11 @@
 			const maxOpacity = 1;
 			const maxTX = 64;
 
+			const duration = remapValue(speed, 0, 100, 750, 50);
+			console.log(duration);
+			dynamicDuration = duration;
+			dynamicEasing = "cubic-bezier(0.19, 1, 0.22, 1)";
+
 			mainContent.style.transition = "none";
 			settingsIcon.style.transition = "none";
 			nonSettingsBtns.style.transition = "none";
@@ -201,17 +235,21 @@
 			if (open) {
 				mainContent.style.transform = `translateY(${initialContentY - maxTY * animationController}px)`;
 				mainContent.style.filter = `blur(${
-					remapValue(Math.max(maxBlur * -animationController, 0), 4, 0) + 2.36
+					badRemapper(Math.max(maxBlur * -animationController, 0), 4, 0) + 2.36
 				}px)`;
 				settingsIcon.style.transform = `rotateZ(${maxRotate * animationController}deg)`;
 				nonSettingsBtns.style.opacity = `${maxOpacity * -animationController - 0.25}`;
 				nonSettingsBtns.style.transform = `translateX(${-maxTX * animationController - maxTX}px)`;
+				// dynamicDuration = maxDuration + 50;
 			} else {
 				mainContent.style.transform = `translateY(${-(maxTY * animationController)}px)`;
 				mainContent.style.filter = `blur(${Math.max(maxBlur * animationController, 0).toFixed(2)}px)`;
 				settingsIcon.style.transform = `rotateZ(${maxRotate * animationController}deg)`;
-				nonSettingsBtns.style.opacity = `${remapValue(maxOpacity * animationController, 0.5, 0)}`;
+				nonSettingsBtns.style.opacity = `${badRemapper(maxOpacity * animationController, 0.5, 0)}`;
 				nonSettingsBtns.style.transform = `translateX(${-(maxTX * animationController)}px)`;
+				// dynamicDuration =
+				// 	remapValue(maxDuration * animationController, 0, maxDuration, maxDuration, 0) +
+				// 	50;
 			}
 
 			mainContent.offsetHeight;
@@ -244,7 +282,7 @@
 					},
 				],
 				{
-					easing: "ease",
+					easing: dynamicEasing,
 					duration: 500,
 				},
 			).onfinish = () => {
@@ -253,17 +291,42 @@
 				draggable.style.filter = "";
 				draggable.getAnimations().forEach((a) => a.cancel());
 				mainContent.getAnimations().forEach((a) => a.cancel());
+				dynamicDuration = 500;
+				dynamicEasing = "ease";
 			};
 			open = !open;
-			if (open) {
-				nonSettingsBtns.style.pointerEvents = "none";
-			} else {
-				nonSettingsBtns.style.pointerEvents = "auto";
-			}
-			draggable.style.pointerEvents = "auto";
 		}
 
 		draggable.addEventListener("mousedown", mouseDown);
+
+		function setEvent(e: MouseEvent) {
+			if (!lastEvent) lastEvent = e;
+			currentEvent = e;
+		}
+
+		const interval = setInterval(() => {
+			if (!currentEvent) return;
+			if (lastEvent) {
+				const newSpeed = currentEvent.clientY - lastEvent.clientY;
+				speeds.push(newSpeed);
+				if (speeds.length > 8) {
+					speeds.shift(); // Remove the oldest speed if the queue exceeds 3
+				}
+				const averageSpeed = speeds.reduce((acc, val) => acc + val, 0) / speeds.length;
+				speed = Math.abs(averageSpeed);
+			}
+			lastEvent = currentEvent;
+		}, 1000 / 20);
+
+		window.addEventListener("mousemove", setEvent);
+
+		return () => {
+			clearInterval(interval);
+			draggable.removeEventListener("mousedown", mouseDown);
+			window.removeEventListener("mousemove", mouseMove);
+			window.removeEventListener("mousemove", setEvent);
+			window.removeEventListener("mouseup", mouseUp);
+		};
 	});
 
 	const eraseChat = () => {
@@ -276,7 +339,7 @@
 <div
 	in:dumbTransitionIn={{}}
 	out:dumbTransitionOut={{}}
-	style="transition: 0.5s ease; transition-property: transform; -webkit-user-drag: none; transform: translateY(-{open
+	style="transition: {dynamicDuration}ms {dynamicEasing}; transition-property: transform; -webkit-user-drag: none; transform: translateY(-{open
 		? panelHeight
 		: 0}px)"
 >
@@ -284,7 +347,9 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={mainContent}
-		style="transform: translateY({open ? 160 : 0}px); filter: blur({open ? 4 : 0}px)"
+		style="transform: translateY({open ? 160 : 0}px); filter: blur({open
+			? 4
+			: 0}px); --duration: {dynamicDuration}ms; --ease: {dynamicEasing}"
 		id="mainContent"
 		class="w-screen flex items-center justify-center after:content-[''] relative after:absolute after:w-full after:h-full {open
 			? 'after:pointer-events-auto bg-black bg-opacity-20'
@@ -297,7 +362,7 @@
 		id="draggable"
 		style="box-shadow: {open
 			? '0px -4px 20px rgba(0,0,0,0.25)'
-			: '0px -0px 8px rgba(0,0,0,0.1)'}; transition: box-shadow 0.5s ease;"
+			: '0px -0px 8px rgba(0,0,0,0.1)'}; transition: box-shadow {dynamicDuration}ms {dynamicEasing};"
 		class="fixed bottom-0 left-0 w-full h-[56px] p-6 bg-white border-t-2 border-t-gray-200 z-50"
 	>
 		<div
@@ -308,6 +373,7 @@
 			<button
 				bind:this={settingsIcon}
 				class="w-7 h-7 transform settingsIcon"
+				style="--duration: {dynamicDuration}ms; --ease: {dynamicEasing};"
 				on:click={toggleSettings}
 			>
 				<iconify-icon
@@ -374,12 +440,12 @@
 
 <style>
 	#mainContent {
-		transition: 0.5s ease;
+		transition: var(--duration) var(--ease);
 		transition-property: filter, transform, background;
 	}
 
 	.settingsIcon {
-		transition: all 0.5s ease;
+		transition: all var(--duration) var(--ease);
 	}
 
 	.non-settings {
