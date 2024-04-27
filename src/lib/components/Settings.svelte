@@ -5,7 +5,7 @@
 	import { settingsSchema, settingsStore } from "$lib/settings";
 	import { onMount, tick } from "svelte";
 
-	let settingsIcon: HTMLButtonElement;
+	let settingsIcon: HTMLDivElement;
 	let settingsPanel: HTMLDivElement;
 	let draggable: HTMLDivElement;
 	let mainContent: HTMLDivElement;
@@ -366,25 +366,32 @@
 			id="draggable"
 			class="w-1/4 h-2 border-2 border-gray-200 bg-white border-b-white rounded-t-lg left-0 right-0 m-auto bottom-full absolute bg-gradient-to-t from-white to-gray-100"
 		/>
-		<div class="-ml-2 z-10 mt-[-11px] flex w-fit gap-4">
+		<div class="-ml-3 z-10 mt-[-16px] flex w-fit gap-4 opacity-80">
 			<button
-				bind:this={settingsIcon}
-				class="w-7 h-7 transform settingsIcon"
-				style="--duration: {dynamicDuration}ms; --ease: {dynamicEasing};"
 				on:click={toggleSettings}
+				class="w-9 h-9 rounded-full hover:bg-gray-200 active:bg-gray-400 flex items-center justify-center transition-colors ease-in-out duration-200"
 			>
-				<iconify-icon
-					style="font-size: 28px;"
-					class="cursor-pointer"
-					icon="material-symbols:settings-outline-rounded"
-				/>
+				<div
+					bind:this={settingsIcon}
+					class="w-7 h-7 transform settingsIcon"
+					style="--duration: {dynamicDuration}ms; --ease: {dynamicEasing}; transition-property: transform;"
+				>
+					<iconify-icon
+						style="font-size: 28px;"
+						class="cursor-pointer"
+						icon="material-symbols:settings-outline-rounded"
+					/>
+				</div>
 			</button>
 			<div
 				style="opacity: {open ? 0 : 1}; transform: translateX({open ? -48 : 0}px)"
 				class="flex gap-4 non-settings"
 				bind:this={nonSettingsBtns}
 			>
-				<button class="w-7 h-7 transform" on:click={eraseChat}>
+				<button
+					class="w-9 h-9 rounded-full hover:bg-gray-200 active:bg-gray-400 flex items-center justify-center transition-colors ease-in-out duration-200"
+					on:click={eraseChat}
+				>
 					<iconify-icon style="font-size: 28px;" icon="icon-park-outline:clear-format"
 					></iconify-icon>
 				</button>
@@ -399,13 +406,13 @@
 			<div class="overflow-y-auto overflow-x-hidden flex-grow">
 				{#each Object.entries(settingsSchema) as [key, value]}
 					<div class="flex gap-4 items-center p-4 border-b border-gray-200">
-						<span class="flex-shrink-0">{value.label}</span>
+						<span class="flex-shrink-0 font-semibold">{value.label}</span>
 						<input
 							data-key={key}
 							type={value.type === "boolean" ? "checkbox" : "text"}
 							class=" p-1 px-2 outline-none {value.type === 'boolean'
-								? ''
-								: 'flex-grow'}"
+								? 'rounded-lg border-2 border-gray-300 text-gray-500 h-6 w-6 cursor-pointer hover:bg-gray-200 active:bg-gray-400 active:border-gray-400 focus:ring-transparent transition-all ease-out duration-200'
+								: 'flex-grow border-none overflow-y-hidden'}"
 							on:input={(e) => changeSetting(key, e.target)}
 							on:change={(e) => {
 								changeSetting(key, e.target);
@@ -441,7 +448,7 @@
 	}
 
 	.settingsIcon {
-		transition: all var(--duration) var(--ease);
+		transition: var(--duration) var(--ease);
 	}
 
 	.non-settings {

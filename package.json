@@ -16,6 +16,7 @@
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^3.1.0",
+		"@tailwindcss/forms": "^0.5.7",
 		"@types/dompurify": "^3.0.5",
 		"@types/jsdom": "^21.1.6",
 		"@types/pako": "^2.0.3",

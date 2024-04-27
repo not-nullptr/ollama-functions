@@ -322,7 +322,8 @@
 		{#if !yapping}
 			<b>user</b>
 			<textarea
-				class="resize-none w-full h-7 outline-none bg-transparent"
+				style="font-size: 20px; line-height: unset;"
+				class="resize-none w-full h-7 outline-none bg-transparent overflow-y-hidden border-none focus:outline-none focus:ring-transparent p-0"
 				on:input={fixInputSize}
 				on:keydown={keyDown}
 				bind:this={input}
