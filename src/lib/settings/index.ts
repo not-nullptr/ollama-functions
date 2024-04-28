@@ -31,6 +31,11 @@ export const settingsSchema = {
 		type: "number",
 		default: 150,
 	},
+	textToSpeech: {
+		label: "AI Text-to-Speech",
+		type: "boolean",
+		default: false,
+	},
 } as const;
 
 type ReadOnlyStore = Partial<{
@@ -51,3 +56,5 @@ export const settingsStore = writable<Mutable>({
 	...defaults,
 	...local,
 });
+
+export const usingMicStore = writable(false);

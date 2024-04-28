@@ -14,6 +14,9 @@
 	let input: HTMLTextAreaElement;
 	let container: HTMLDivElement;
 
+	let usingMic = false;
+	let ttsSpeaking = false;
+
 	let inferenceContainer: HTMLDivElement;
 	let addText: (cb: () => void, getContainerBounds: () => DOMRect) => Promise<void> = async (
 		cb,
@@ -31,6 +34,40 @@
 	let triggerFunction: () => Promise<void>;
 	let iconUrl: string;
 	let error = false;
+	let ws: WebSocket | null;
+
+	$: {
+		if (browser) {
+			if ($settingsStore.textToSpeech) {
+				if (!ws) {
+					ws = new WebSocket("ws://127.0.0.1:3000");
+					ws.onmessage = (e) => {
+						const msg = e.data.toString();
+						if (msg === "THE MAN MADE HORROR DOTH SPEAKETH...") {
+							console.log("its so over...");
+							ttsSpeaking = false;
+							runSpeechRecognition();
+						} else {
+							// read out blob as text
+							const blob = new Blob([e.data], { type: "text/plain" });
+							const reader = new FileReader();
+							reader.onload = () => {
+								const text = reader.result as string;
+								console.log(text);
+							};
+							reader.readAsText(blob);
+						}
+					};
+				}
+				if (!yapping && !ttsSpeaking) {
+					runSpeechRecognition();
+				}
+			} else {
+				ws?.close();
+				ws = null;
+			}
+		}
+	}
 
 	$: {
 		$messagesStore;
@@ -133,6 +170,7 @@
 	};
 
 	const sendMessage = async () => {
+		let query = input.value;
 		$messagesStore = [
 			...$messagesStore,
 			{ role: "user", content: input.value },
@@ -142,8 +180,8 @@
 		await tick();
 		beginInference();
 		await tick();
+		input.value = "";
 		yapping = true;
-		let query = input.value;
 		let sysPrompt = "";
 		const date = new Date();
 		const day = date.toLocaleString("en-GB", { weekday: "long" });
@@ -210,18 +248,34 @@
 		await new Promise((resolve) => setTimeout(resolve, 400)); // necessary for the animation to show
 		await tick();
 		const reader = body.getReader();
+		let ttsTextHolder = "";
 		const handleMessage = async (message: ChatResponse) => {
 			await addText(
 				() => {
+					ttsTextHolder += message.message.content;
 					$messagesStore[$messagesStore.length - 1].content += message.message.content;
+					if (
+						message.message.content.includes("?") ||
+						message.message.content.includes("!") ||
+						message.message.content.includes(".") ||
+						message.message.content.includes(":")
+					) {
+						if (ws) {
+							ttsSpeaking = true;
+							ws.send(ttsTextHolder);
+							ttsTextHolder = "";
+						}
+					}
 				},
 				() => inferenceContainer.getBoundingClientRect(),
 			);
 			if (message.done) {
-				yapping = false;
 				newMsgOpts = {};
-				await tick();
-				input.focus();
+				yapping = false;
+				if (!$settingsStore.textToSpeech) {
+					await tick();
+					input.focus();
+				}
 			}
 			fixContainerScroll();
 			fixInputSize();
@@ -243,13 +297,43 @@
 		reader.read().then(read);
 	};
 
+	const runSpeechRecognition = () => {
+		if (webkitSpeechRecognition) {
+			const recognition = new webkitSpeechRecognition();
+			recognition.continuous = true;
+			recognition.interimResults = true;
+			recognition.lang = "en-GB";
+			recognition.onresult = (event) => {
+				const transcript = Array.from(event.results)
+					.map((result) => result[0].transcript)
+					.join("");
+				input.value = transcript;
+				fixInputSize();
+				if (event.results[0].isFinal) {
+					recognition.stop();
+					sendMessage();
+				}
+			};
+			recognition.start();
+		}
+	};
+
 	onMount(() => {
 		fixInputSize();
 		fixContainerScroll();
+		if ($settingsStore.textToSpeech) {
+			runSpeechRecognition();
+		}
 		document.body.style.userSelect = "";
-		toolsStore.subscribe((val) => {
+		const unsub = toolsStore.subscribe((val) => {
 			fnCaller.setFunctions(val.schema, val.fns);
 		});
+		return () => {
+			unsub();
+			if (ws) {
+				ws.close();
+			}
+		};
 	});
 </script>
 
@@ -319,7 +403,7 @@
 				</button>
 			</div>
 		{/if}
-		{#if !yapping}
+		{#if !yapping && !ttsSpeaking}
 			<b>user</b>
 			<textarea
 				style="font-size: 20px; line-height: unset;"
