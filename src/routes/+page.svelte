@@ -194,7 +194,8 @@
 				},
 				...$messagesStore,
 			];
-			sysPrompt += `You are LLaMA, a helpful, witty, fun-to-chat-with but not over-the-top AI assistant. Current date is ${day} ${date.toLocaleDateString()}, current time is ${time}. `;
+			// sysPrompt += `You are LLaMA, a helpful, witty, fun-to-chat-with but not over-the-top AI assistant. Current date is ${day} ${date.toLocaleDateString()}, current time is ${time}. `;
+			sysPrompt += `You are ${$settingsStore.textToSpeech ? "Jarvis, a friend for the user who is not an AI assistant, but a real person" : "LLaMA, a helpful AI assistant"}.${$settingsStore.textToSpeech ? " Keep text as short as possible, 2 sentences max. Do not say you're an AI, nor a language model, nor a large language model." : ""} Current date is ${day} ${date.toLocaleDateString()}, current time is ${time}. `;
 		}
 		const fn = await fnCaller.getFunction(query, $messagesStore);
 		// sometimes it outputs like { "name": {"param1": "value"} }
